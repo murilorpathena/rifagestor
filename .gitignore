@@ -11,3 +11,6 @@ yarn-error.log*
 .vercel
 *.tsbuildinfo
 .DS_Store
+
+# Supabase CLI temp files
+supabase/.temp/
