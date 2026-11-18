@@ -1,0 +1,19 @@
+[auth]
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://*.vercel.app"]
+enable_signup = true
+
+[api]
+enabled = true
+
+[database]
+enabled = true
+
+[storage]
+enabled = false
+
+[realtime]
+enabled = false
+
+[edge_functions]
+enabled = false
