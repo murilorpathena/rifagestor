@@ -6,7 +6,7 @@ import { BottomNav } from "@/components/app/bottom-nav";
 import { MobileHeader } from "@/components/app/mobile-header";
 import { BuyerForm } from "@/components/app/buyer-form";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import {
   calculateSaleTotalCents,
   canFinalizeSale,
@@ -15,6 +15,7 @@ import {
   validSelectedNumbers,
 } from "@/lib/sale";
 import { Ticket, CheckCircle2, AlertTriangle, LoaderCircle, Plus, Minus, Search } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 interface NumberItem {
   id: string;
@@ -75,7 +76,6 @@ export default function VendasPage() {
           .eq("raffle_id", r.id)
           .order("number", { ascending: true });
         setNumbers(n ?? []);
-        // Números escolhidos na grade de /numeros.
         try {
           const raw = sessionStorage.getItem("rifa:selected-numbers");
           if (raw) {
@@ -143,7 +143,6 @@ export default function VendasPage() {
       setBuyerStep("form");
       setSelectedNumbers(new Set());
       setBuyer({ name: "", cpf: "", email: "", whatsapp: "" });
-      // Refresh numbers
       const nums = await supabase.from("raffle_numbers").select("id, number, status").eq("raffle_id", raffle.id).order("number", { ascending: true });
       setNumbers(nums.data ?? []);
     } catch (err: any) {
@@ -153,12 +152,24 @@ export default function VendasPage() {
     }
   };
 
+  const formatCpf = (cpf: string) => cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+
+  const paymentLabel = (method: string) => {
+    switch (method) {
+      case "pix": return "PIX";
+      case "cash": return "Dinheiro";
+      case "card": return "Cartão";
+      case "other": return "Outro";
+      default: return method;
+    }
+  };
+
   if (loading || !raffle) {
     return (
       <main className="min-h-screen pb-24">
         <MobileHeader title="Nova venda" />
         <div className="px-4 py-12 flex flex-col items-center justify-center min-h-[40vh]">
-          <LoaderCircle className="size-8 animate-spin text-[var(--brand)]" />
+          <LoaderCircle className="size-8 animate-spin text-[var(--ink)]" />
           <p className="mt-3 text-sm text-[var(--muted)]">Carregando números...</p>
         </div>
         <BottomNav />
@@ -172,60 +183,70 @@ export default function VendasPage() {
       <div className="px-4 pb-6 space-y-5">
         {/* Buyer form step */}
         {buyerStep === "form" && (
-          <section className="rounded-2xl border border-[var(--line)] bg-white p-4 card-shadow">
-            <h2 className="text-lg font-bold mb-3">Comprador</h2>
-            <BuyerForm initial={buyer} onSubmit={handleBuyerSubmit} loading={submitting} />
-          </section>
+          <Card>
+            <CardHeader>
+              <CardTitle>Comprador</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <BuyerForm initial={buyer} onSubmit={handleBuyerSubmit} loading={submitting} />
+            </CardContent>
+          </Card>
         )}
 
         {/* Numbers selection step */}
         {buyerStep === "numbers" && (
           <>
-            <section className="rounded-2xl border border-[var(--line)] bg-white p-4 card-shadow">
-              <div className="flex items-center justify-between mb-3">
+            <Card>
+              <CardHeader className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-bold">Selecionar números</h2>
-                  <p className="text-xs text-[var(--muted)]">{selectedList.length} de {availableNumbers.length} disponíveis</p>
+                  <CardTitle>Selecionar números</CardTitle>
+                  <p className="text-xs text-[var(--muted)]">
+                    {selectedList.length} de {availableNumbers.length} disponíveis
+                  </p>
                 </div>
                 <Button size="sm" onClick={() => setBuyerStep("confirm")} disabled={selectedList.length === 0} className="hidden sm:inline">
                   Continuar
                 </Button>
-              </div>
-
-              <div className="grid grid-cols-4 gap-1.5 px-1 max-w-[460px] mx-auto">
-                {availableNumbers.map((num) => {
-                  const selected = selectedNumbers.has(num.id);
-                  return (
-                    <button
-                      key={num.id}
-                      type="button"
-                      onClick={() => handleNumberToggle(num.id)}
-                      className={`
-                        aspect-square rounded-xl border-2 flex items-center justify-center text-xs font-bold transition
-                        ${selected ? "ring-2 ring-[var(--brand)] ring-offset-1 bg-[var(--brand)] text-white" : "bg-white text-[var(--foreground)] border-[var(--line)]"}
-                      `}
-                    >
-                      {num.number}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {selectedList.length > 0 && (
-                <div className="mt-4 px-2">
-                  <div className="flex items-center justify-between px-3 py-2.5 rounded-xl border border-[var(--line)] bg-[#f8faf9]">
-                    <span className="text-sm font-semibold">{selectedList.length} número(s)</span>
-                    <span className="text-sm font-bold text-[var(--brand)]">{formatCurrency(total)}</span>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="px-4 py-3">
+                  <div className="grid grid-cols-4 gap-2 px-1 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12">
+                    {availableNumbers.map((num) => {
+                      const selected = selectedNumbers.has(num.id);
+                      return (
+                        <button
+                          key={num.id}
+                          type="button"
+                          onClick={() => handleNumberToggle(num.id)}
+                          className={cn(
+                            "aspect-square rounded-lg border flex items-center justify-center text-xs font-medium transition disabled:opacity-30 disabled:hover:bg-none",
+                            selected
+                              ? "ring-2 ring-[var(--ink)] ring-offset-1 bg-[var(--ink)] text-white"
+                              : "bg-white text-[var(--ink)] border-[var(--line)] hover:bg-[#f7f7f7]",
+                          )}
+                        >
+                          {num.number}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-              )}
-            </section>
+                {selectedList.length > 0 && (
+                  <div className="px-4 py-3 border-t border-[var(--line)]">
+                    <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-[var(--line)] bg-[#f7f7f7]">
+                      <span className="text-sm font-semibold">{selectedList.length} número(s)</span>
+                      <span className="text-sm font-bold text-[var(--ink)]">{formatCurrency(total)}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             <div className="grid grid-cols-2 gap-3">
-              <Button size="sm" variant="ghost" onClick={() => setBuyerStep("form")} className="flex items-center justify-center gap-1 px-2">
+              <Button size="sm" variant="ghost" onClick={() => setBuyerStep("form")} className="flex items-center justify-center gap-1 px-2 w-full">
                 <Minus className="size-3.5" /> Alterar comprador
               </Button>
-              <Button size="sm" onClick={() => setBuyerStep("confirm")} disabled={selectedList.length === 0}>
+              <Button size="sm" onClick={() => setBuyerStep("confirm")} disabled={selectedList.length === 0} className="w-full">
                 Continuar <Ticket className="ml-1 size-3.5" />
               </Button>
             </div>
@@ -234,71 +255,83 @@ export default function VendasPage() {
 
         {/* Confirm step */}
         {buyerStep === "confirm" && (
-          <section className="rounded-2xl border border-[var(--line)] bg-white p-4 card-shadow">
-            <h2 className="text-lg font-bold mb-3">Confirme a venda</h2>
-            <div className="space-y-3 mb-4">
-              <div className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--line)] bg-[#f8faf9]">
-                <span className="text-sm text-[var(--muted)]">Comprador</span>
-                <span className="text-sm font-medium">{buyer.name}</span>
-              </div>
-              <div className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--line)] bg-[#f8faf9]">
-                <span className="text-sm text-[var(--muted)]">CPF</span>
-                <span className="text-sm font-medium">{buyer.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}</span>
-              </div>
-              <div className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--line)] bg-[#f8faf9]">
-                <span className="text-sm text-[var(--muted)]">Quantidade</span>
-                <span className="text-sm font-medium">{selectedList.length} número(s)</span>
-              </div>
-              <div className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--line)] bg-[#f8faf9]">
-                <span className="text-sm text-[var(--muted)]">Valor total</span>
-                <span className="text-sm font-bold text-[var(--brand)]">{formatCurrency(total)}</span>
-              </div>
-              <div className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--line)] bg-[#f8faf9]">
-                <span className="text-sm text-[var(--muted)]">Pagamento</span>
-                <span className="text-sm font-medium">
-                  {paymentMethod === "pix" ? "PIX" : paymentMethod === "cash" ? "Dinheiro" : paymentMethod === "card" ? "Cartão" : "Outro"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between px-3 py-2 rounded-xl border border-[var(--line)] bg-[#f8faf9]">
-                <span className="text-sm text-[var(--muted)]">Status</span>
-                <span className={`text-xs font-medium ${paymentStatus === "paid" ? "text-[var(--ink)]" : "text-[var(--muted)]"}`}>
-                  {paymentStatus === "paid" ? "Pago" : "Pendente"}
-                </span>
-              </div>
-            </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Confirme a venda</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="px-4 py-4 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-[var(--line)] bg-[#f7f7f7]">
+                    <span className="text-sm text-[var(--muted)]">Comprador</span>
+                    <span className="text-sm font-medium truncate">{buyer.name}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-[var(--line)] bg-[#f7f7f7]">
+                    <span className="text-sm text-[var(--muted)]">CPF</span>
+                    <span className="text-sm font-medium truncate">{buyer.cpf ? formatCpf(buyer.cpf) : "—"}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-[var(--line)] bg-[#f7f7f7]">
+                    <span className="text-sm text-[var(--muted)]">Quantidade</span>
+                    <span className="text-sm font-medium">{selectedList.length} número(s)</span>
+                  </div>
+                  <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-[var(--line)] bg-[#f7f7f7]">
+                    <span className="text-sm text-[var(--muted)]">Valor total</span>
+                    <span className="text-sm font-bold text-[var(--ink)]">{formatCurrency(total)}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-[var(--line)] bg-[#f7f7f7]">
+                    <span className="text-sm text-[var(--muted)]">Pagamento</span>
+                    <span className="text-sm font-medium">{paymentLabel(paymentMethod)}</span>
+                  </div>
+                  <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-[var(--line)] bg-[#f7f7f7]">
+                    <span className="text-sm text-[var(--muted)]">Status</span>
+                    <span className={`text-xs font-medium block ${paymentStatus === "paid" ? "text-green-600" : "text-[var(--muted)]"}`}>
+                      {paymentStatus === "paid" ? "Pago" : "Pendente"}
+                    </span>
+                  </div>
+                </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-[var(--foreground)]">Método de pagamento</label>
-                <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className="focus-ring rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm focus:border-[var(--brand)] outline-none">
-                  <option value="pix">PIX</option>
-                  <option value="cash">Dinheiro</option>
-                  <option value="card">Cartão</option>
-                  <option value="other">Outro</option>
-                </select>
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-[var(--muted)]">Método de pagamento</label>
+                    <select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="focus-ring rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm focus:border-[var(--ink)] outline-none"
+                    >
+                      <option value="pix">PIX</option>
+                      <option value="cash">Dinheiro</option>
+                      <option value="card">Cartão</option>
+                      <option value="other">Outro</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-[var(--muted)]">Status</label>
+                    <select
+                      value={paymentStatus}
+                      onChange={(e) => setPaymentStatus(e.target.value)}
+                      className="focus-ring rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm focus:border-[var(--ink)] outline-none"
+                    >
+                      <option value="paid">Pago</option>
+                      <option value="pending">Pendente</option>
+                    </select>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-[var(--foreground)]">Status</label>
-                <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className="focus-ring rounded-lg border border-[var(--line)] bg-white px-2.5 py-2 text-sm focus:border-[var(--brand)] outline-none">
-                  <option value="paid">Pago</option>
-                  <option value="pending">Pendente</option>
-                </select>
+
+              {error && (
+                <div className="px-4 mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{error}</div>
+              )}
+
+              <div className="px-4 mt-4 grid grid-cols-2 gap-3">
+                <Button variant="ghost" size="sm" onClick={() => setBuyerStep("numbers")} className="flex items-center justify-center gap-1 px-2 w-full">
+                  <Plus className="size-3.5" /> + número
+                </Button>
+                <Button size="lg" onClick={handleCompleteSale} loading={submitting} disabled={submitting} className="w-full">
+                  Finalizar venda <CheckCircle2 className="ml-1 size-3.5" />
+                </Button>
               </div>
-            </div>
-
-            {error && (
-              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{error}</div>
-            )}
-
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <Button variant="ghost" size="sm" onClick={() => setBuyerStep("numbers")} className="flex items-center justify-center gap-1 px-2">
-                <Plus className="size-3.5" /> + número
-              </Button>
-              <Button size="lg" onClick={handleCompleteSale} loading={submitting} disabled={submitting}>
-                Finalizar venda <CheckCircle2 className="ml-1 size-3.5" />
-              </Button>
-            </div>
-          </section>
+            </CardContent>
+          </Card>
         )}
 
         {success && (

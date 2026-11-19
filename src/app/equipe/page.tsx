@@ -9,6 +9,7 @@ import { Field, Input } from "@/components/ui/input";
 import { useToast } from "@/components/providers/toast-provider";
 import { useClientSupabase } from "@/hooks/use-client-supabase";
 import { useWorkspace } from "@/components/providers/workspace-provider";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 interface TeamRow {
   id: string;
@@ -139,11 +140,13 @@ export default function EquipePage() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Equipe" userMenu />
-      <div className="px-4 py-6 space-y-4">
+      <div className="px-4 py-6 space-y-5 pb-6">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-extrabold tracking-tight">Equipe de vendas</h1>
-            <p className="text-sm text-[var(--muted)]">Quem pode vender e acompanhar os números desta rifa.</p>
+            <p className="text-sm text-[var(--muted)]">
+              Quem pode vender e acompanhar os números desta rifa.
+            </p>
           </div>
           {canManage ? (
             <Button type="button" size="sm" onClick={() => setShowForm((v) => !v)}>
@@ -153,86 +156,100 @@ export default function EquipePage() {
         </div>
 
         {showForm && canManage ? (
-          <section className="rounded-2xl border border-[var(--line)] bg-white p-4 card-shadow">
-            <h2 className="mb-3 text-base font-bold">Cadastrar vendedor</h2>
-            <form onSubmit={handleCreate} className="grid gap-3 sm:grid-cols-2">
-              <Field label="Nome" htmlFor="team-name">
-                <Input
-                  id="team-name"
-                  value={form.name}
-                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="Nome do vendedor"
-                  required
-                />
-              </Field>
-              <Field label="E-mail" htmlFor="team-email">
-                <Input
-                  id="team-email"
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                  placeholder="vendedor@exemplo.com"
-                  required
-                />
-              </Field>
-              <Field label="Senha gerada" htmlFor="team-password" className="sm:col-span-2">
-                <Input
-                  id="team-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  minLength={8}
-                  required
-                />
-              </Field>
-              <div className="flex flex-wrap gap-2 sm:col-span-2">
-                <Button type="submit" loading={creating}>
-                  <UserRound className="mr-2 size-4" /> Criar vendedor
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setPassword(makePassword())}>
-                  Gerar outra senha
-                </Button>
-              </div>
-            </form>
-          </section>
+          <Card>
+            <CardHeader>
+              <CardTitle>Cadastrar vendedor</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <form onSubmit={handleCreate} className="grid gap-3 sm:grid-cols-2 px-4 py-4">
+                <Field label="Nome" htmlFor="team-name">
+                  <Input
+                    id="team-name"
+                    value={form.name}
+                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                    placeholder="Nome do vendedor"
+                    required
+                  />
+                </Field>
+                <Field label="E-mail" htmlFor="team-email">
+                  <Input
+                    id="team-email"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                    placeholder="vendedor@exemplo.com"
+                    required
+                  />
+                </Field>
+                <Field label="Senha gerada" htmlFor="team-password" className="sm:col-span-2">
+                  <Input
+                    id="team-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    minLength={8}
+                    required
+                  />
+                </Field>
+                <div className="flex flex-wrap gap-2 sm:col-span-2">
+                  <Button type="submit" loading={creating}>
+                    <UserRound className="mr-2 size-4" /> Criar vendedor
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setPassword(makePassword())}>
+                    Gerar outra senha
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         ) : null}
 
         {loading ? (
-          <p className="py-10 text-center text-sm text-[var(--muted)]">Carregando equipe...</p>
+          <Card>
+            <CardContent className="py-10 text-center">
+              <p className="text-sm text-[var(--muted)]">Carregando equipe...</p>
+            </CardContent>
+          </Card>
         ) : members.length === 0 ? (
-          <p className="py-10 text-center text-sm text-[var(--muted)]">
-            Nenhum membro nesta rifa. Use &ldquo;Novo&rdquo; para cadastrar vendedores.
-          </p>
+          <Card>
+            <CardContent className="py-10 text-center">
+              <p className="text-sm text-[var(--muted)]">
+                Nenhum membro nesta rifa. Use "Novo" para cadastrar vendedores.
+              </p>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {members.map((member) => (
-              <div key={member.id} className="rounded-xl border border-[var(--line)] bg-white p-3 card-shadow">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f7f7f7] text-sm font-bold">
-                      {member.profile?.name?.[0] ?? "?"}
+              <Card key={member.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#f7f7f7] text-sm font-bold">
+                        {member.profile?.name?.[0] ?? "?"}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{member.profile?.name ?? "Usuário"}</p>
+                        <p className="truncate text-xs text-[var(--muted)]">{member.profile?.email ?? "—"}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{member.profile?.name ?? "Usuário"}</p>
-                      <p className="truncate text-xs text-[var(--muted)]">{member.profile?.email ?? "—"}</p>
-                    </div>
+                    <span className="shrink-0 rounded-full border border-[var(--line)] bg-[#f7f7f7] px-2 py-0.5 text-[10px] font-bold uppercase">
+                      {member.profile?.role === "gestor" || member.role === "owner" ? "Gestor" : "Vendedor"}
+                    </span>
                   </div>
-                  <span className="shrink-0 rounded-full border border-[var(--line)] bg-[#f7f7f7] px-2 py-0.5 text-[10px] font-bold uppercase">
-                    {member.profile?.role === "gestor" || member.role === "owner" ? "Gestor" : "Vendedor"}
-                  </span>
-                </div>
-                <div className="mt-3 flex items-center justify-between border-t border-[var(--line-soft)] pt-2">
-                  <span className="text-xs text-[var(--muted)]">{member.sales_count} venda(s)</span>
-                  {canManage && member.user_id !== me?.id ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleRemove(member)}
-                      className="focus-ring inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-[var(--danger)] hover:bg-red-50"
-                    >
-                      <Trash2 className="size-3.5" /> Remover
-                    </button>
-                  ) : null}
-                </div>
-              </div>
+                  <div className="mt-4 flex items-center justify-between border-t border-[var(--line)] pt-3">
+                    <span className="text-xs text-[var(--muted)]">{member.sales_count} venda(s)</span>
+                    {canManage && member.user_id !== me?.id ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleRemove(member)}
+                        className="focus-ring inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-[var(--danger)] hover:bg-red-50"
+                      >
+                        <Trash2 className="size-3.5" /> Remover
+                      </button>
+                    ) : null}
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}

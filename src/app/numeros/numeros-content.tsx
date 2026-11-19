@@ -14,6 +14,7 @@ import { useWorkspace } from "@/components/providers/workspace-provider";
 import { useClientSupabase } from "@/hooks/use-client-supabase";
 import { SkeletonNumberGrid } from "@/components/app/skeleton-loading";
 import type { RaffleNumber } from "@/lib/types";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export default function NumerosContent() {
   const supabase = useClientSupabase();
@@ -71,7 +72,6 @@ export default function NumerosContent() {
 
   function sellSelected(items: RaffleNumber[]) {
     if (items.length === 0) return;
-    // O PDV lê a seleção da sessão para manter o fluxo simples.
     sessionStorage.setItem("rifa:selected-numbers", JSON.stringify(items.map((n) => n.id)));
     router.push("/vendas");
   }
@@ -83,33 +83,69 @@ export default function NumerosContent() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Números" userMenu />
-      <div className="px-4 py-6 space-y-5">
+      <div className="px-4 py-6 space-y-6 pb-6">
         {wsLoading ? (
           <SkeletonNumberGrid />
         ) : !raffle ? (
-          <p className="py-10 text-center text-sm text-[var(--muted)]">Nenhuma rifa configurada.</p>
+          <Card>
+            <CardContent className="py-10 text-center">
+              <p className="text-sm text-[var(--muted)]">Nenhuma rifa configurada.</p>
+            </CardContent>
+          </Card>
         ) : (
           <>
-            <div>
-              <h1 className="text-xl font-extrabold tracking-tight">{raffle.title}</h1>
-              <p className="text-sm text-[var(--muted)]">
-                {formatCurrency(raffle.ticket_price_cents)} por número
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-xl font-extrabold tracking-tight">{raffle.title}</h1>
+                <p className="text-sm text-[var(--muted)]">
+                  {formatCurrency(raffle.ticket_price_cents)} por número
+                </p>
+              </div>
+              {canManage ? (
+                <Link
+                  href="/configuracoes"
+                  className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-medium hover:bg-[#f7f7f7]"
+                >
+                  Alterar total de números <ArrowRight className="size-3.5" />
+                </Link>
+              ) : null}
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-xl border border-[var(--line)] bg-white p-3 text-center">
-                <p className="text-lg font-bold">{available}</p>
-                <p className="text-[10px] uppercase text-[var(--muted)]">Livres</p>
-              </div>
-              <div className="rounded-xl border border-[var(--line)] bg-white p-3 text-center">
-                <p className="text-lg font-bold">{reserved}</p>
-                <p className="text-[10px] uppercase text-[var(--muted)]">Reservados</p>
-              </div>
-              <div className="rounded-xl border border-[var(--line)] bg-white p-3 text-center">
-                <p className="text-lg font-bold">{sold}</p>
-                <p className="text-[10px] uppercase text-[var(--muted)]">Vendidos</p>
-              </div>
+            {/* Contadores */}
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardContent className="pt-5 pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-bold">{available}</p>
+                      <p className="text-[10px] uppercase text-[var(--muted)]">Livres</p>
+                    </div>
+                    <div className="w-8 h-8 rounded border border-[var(--line)] bg-white flex items-center justify-center" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-5 pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-bold">{reserved}</p>
+                      <p className="text-[10px] uppercase text-[var(--muted)]">Reservados</p>
+                    </div>
+                    <div className="w-8 h-8 rounded border border-[var(--line)] bg-[#f0f0f0] flex items-center justify-center" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-5 pb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-bold">{sold}</p>
+                      <p className="text-[10px] uppercase text-[var(--muted)]">Vendidos</p>
+                    </div>
+                    <div className="w-8 h-8 rounded bg-[var(--ink)] flex items-center justify-center" />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 text-[11px] text-[var(--muted)]">
@@ -127,7 +163,11 @@ export default function NumerosContent() {
             {loading ? (
               <SkeletonNumberGrid />
             ) : numbers.length === 0 ? (
-              <p className="py-10 text-center text-sm text-[var(--muted)]">Nenhum número gerado.</p>
+              <Card>
+                <CardContent className="py-10 text-center">
+                  <p className="text-sm text-[var(--muted)]">Nenhum número gerado.</p>
+                </CardContent>
+              </Card>
             ) : (
               <NumberGrid
                 raffle={raffle}
@@ -149,15 +189,6 @@ export default function NumerosContent() {
               <p className="flex items-center gap-2 text-xs text-[var(--muted)]">
                 <CircleDot className="size-3.5" /> Selecione números livres para registrar uma venda.
               </p>
-            ) : null}
-
-            {canManage ? (
-              <Link
-                href="/configuracoes"
-                className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-medium hover:bg-[#f7f7f7]"
-              >
-                Alterar total de números <ArrowRight className="size-3.5" />
-              </Link>
             ) : null}
           </>
         )}

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn, formatCurrency } from "@/lib/utils";
 import type { Raffle, RaffleNumber, Sale } from "@/lib/types";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface NumberGridProps {
   raffle: Raffle | null;
@@ -50,12 +51,15 @@ export function NumberGrid({
   return (
     <section className="space-y-5">
       <div className="flex items-center justify-between gap-2 px-1">
-        <h2 className="text-lg font-bold tracking-tight">
-          {onManage ? "Grade da rifa" : "Números disponíveis"}
-        </h2>
-        {onManage ? (
-          <span className="text-[10px] text-[var(--muted)]">Toque para reservar/liberar</span>
-        ) : (
+        <div>
+          <h2 className="text-lg font-bold tracking-tight">
+            {onManage ? "Grade da rifa" : "Números disponíveis"}
+          </h2>
+          {onManage ? (
+            <p className="text-xs text-[var(--muted)]">Toque para reservar ou liberar um número.</p>
+          ) : null}
+        </div>
+        {onManage ? null : (
           <>
             <Button size="sm" onClick={() => onSellSelected(selectedList)} disabled={!canSell || loading} className="hidden sm:inline">
               Vender selecionados <ArrowRight className="ml-2 size-3.5" />
@@ -70,46 +74,50 @@ export function NumberGrid({
         )}
       </div>
 
-      <div className="grid grid-cols-4 gap-1.5 px-1 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12">
-        {sorted.map((number) => {
-          const selected = selectedNumbers.has(number.id);
-          const status = statusStyle(number.status);
-          return (
-            <button
-              key={number.id}
-              type="button"
-              onClick={() => {
-                if (onManage) {
-                  if (number.status === "sold") return;
-                  onManage(number);
-                  return;
-                }
-                if (number.status !== "available") return;
-                onToggle(number.id);
-              }}
-              disabled={number.status === "sold" || (!onManage && number.status !== "available")}
-              aria-pressed={selected}
-              className={cn(
-                "aspect-square rounded-lg border flex items-center justify-center text-xs font-medium transition disabled:opacity-30",
-                status,
-                selected ? "ring-2 ring-[var(--ink)] ring-offset-1 bg-[var(--ink)] text-white" : "",
-              )}
-            >
-              {number.number}
-            </button>
-          );
-        })}
-      </div>
+      <Card>
+        <div className="grid grid-cols-4 gap-2 px-3 py-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12">
+          {sorted.map((number) => {
+            const selected = selectedNumbers.has(number.id);
+            const status = statusStyle(number.status);
+            return (
+              <button
+                key={number.id}
+                type="button"
+                onClick={() => {
+                  if (onManage) {
+                    if (number.status === "sold") return;
+                    onManage(number);
+                    return;
+                  }
+                  if (number.status !== "available") return;
+                  onToggle(number.id);
+                }}
+                disabled={number.status === "sold" || (!onManage && number.status !== "available")}
+                aria-pressed={selected}
+                className={cn(
+                  "aspect-square rounded-lg border flex items-center justify-center text-xs font-medium transition disabled:opacity-30 disabled:hover:bg-none disabled:hover:text-none",
+                  status,
+                  selected ? "ring-2 ring-[var(--ink)] ring-offset-1 bg-[var(--ink)] text-white" : "",
+                )}
+              >
+                {number.number}
+              </button>
+            );
+          })}
+        </div>
+      </Card>
 
       {!onManage && selectedList.length > 0 && (
-        <div className="px-2">
-          <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-[var(--line)] bg-[#f7f7f7]">
-            <span className="text-sm font-semibold">{selectedList.length} número(s) selecionado(s)</span>
-            <span className="text-sm font-bold text-[var(--ink)]">
-              {formatCurrency(price * selectedList.length)}
-            </span>
-          </div>
-        </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-[var(--line)] bg-[#f7f7f7]">
+              <span className="text-sm font-semibold">{selectedList.length} número(s) selecionado(s)</span>
+              <span className="text-sm font-bold text-[var(--ink)]">
+                {formatCurrency(price * selectedList.length)}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </section>
   );
