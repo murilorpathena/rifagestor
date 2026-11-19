@@ -191,10 +191,10 @@ export default function EquipePage() {
                   />
                 </Field>
                 <div className="flex flex-wrap gap-2 sm:col-span-2">
-                  <Button type="submit" loading={creating}>
+                  <Button type="submit" loading={creating} className="w-full sm:w-auto">
                     <UserRound className="mr-2 size-4" /> Criar vendedor
                   </Button>
-                  <Button type="button" variant="outline" onClick={() => setPassword(makePassword())}>
+                  <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setPassword(makePassword())}>
                     Gerar outra senha
                   </Button>
                 </div>
@@ -242,9 +242,9 @@ export default function EquipePage() {
                       <button
                         type="button"
                         onClick={() => void handleRemove(member)}
-                        className="focus-ring inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-[var(--danger)] hover:bg-red-50"
+                        className="focus-ring inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-[var(--danger)] hover:bg-red-50 w-full sm:w-auto"
                       >
-                        <Trash2 className="size-3.5" /> Remover
+                        <Trash2 className="mr-1.5 size-3.5" /> Remover
                       </button>
                     ) : null}
                   </div>

@@ -244,12 +244,13 @@ export default function AdminUsuariosPage() {
                 />
               </Field>
               <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
-                <Button type="submit" loading={creating}>
+                <Button type="submit" loading={creating} className="w-full sm:w-auto">
                   <UserCog className="mr-2 size-4" /> Criar usuário
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
+                  className="w-full sm:w-auto"
                   onClick={() => setForm((p) => ({ ...p, password: makePassword() }))}
                 >
                   <KeyRound className="mr-2 size-4" /> Gerar outra senha
@@ -311,6 +312,7 @@ export default function AdminUsuariosPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => void handleResetPassword(user)}
+                            className="w-full sm:w-auto"
                           >
                             <KeyRound className="mr-1.5 size-3.5" /> Nova senha
                           </Button>
@@ -318,7 +320,7 @@ export default function AdminUsuariosPage() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="text-[var(--danger)]"
+                            className="text-[var(--danger)] w-full sm:w-auto"
                             disabled={busyId === user.id}
                             onClick={() => void handleRemove(user)}
                           >
