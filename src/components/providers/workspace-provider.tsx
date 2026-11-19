@@ -2,13 +2,15 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { getSupabase } from "@/lib/supabase";
-import type { Membership, Organization, Raffle } from "@/lib/types";
+import type { Membership, Organization, Profile, Raffle, UserRole } from "@/lib/types";
 import { useAuth } from "./auth-provider";
 
 interface WorkspaceContextValue {
   organization: Organization | null;
   raffle: Raffle | null;
   membership: Membership | null;
+  profile: Profile | null;
+  userRole: UserRole | null;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -21,6 +23,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [raffle, setRaffle] = useState<Raffle | null>(null);
   const [membership, setMembership] = useState<Membership | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +33,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setOrganization(null);
       setRaffle(null);
       setMembership(null);
+      setProfile(null);
+      setUserRole(null);
       setLoading(false);
       return;
     }
@@ -42,6 +48,33 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       return;
     }
+
+    // Carrega o profile para saber o role do usuário
+    const { data: prof, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, name, email, role, created_at")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError || !prof) {
+      setError(profileError?.message ?? "Não foi possível carregar seu perfil.");
+      setLoading(false);
+      return;
+    }
+
+    setProfile(prof as Profile);
+    setUserRole((prof as Profile).role as UserRole);
+
+    // Se for admin, não precisa de organização
+    if ((prof as Profile).role === 'admin') {
+      setOrganization(null);
+      setRaffle(null);
+      setMembership(null);
+      setLoading(false);
+      return;
+    }
+
+    // Para gestor/vendedor, carrega organização
     const { data: member, error: memberError } = await supabase
       .from("organization_members")
       .select("*")
@@ -50,7 +83,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       .maybeSingle();
 
     if (memberError || !member) {
-      setError(memberError?.message ?? "Nenhuma rifa foi encontrada para esta conta.");
+      setError("Nenhuma organização encontrada para esta conta.");
       setOrganization(null);
       setRaffle(null);
       setMembership(null);
@@ -85,8 +118,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const value = useMemo(
-    () => ({ organization, raffle, membership, loading, error, refresh }),
-    [organization, raffle, membership, loading, error, refresh],
+    () => ({ organization, raffle, membership, profile, userRole, loading, error, refresh }),
+    [organization, raffle, membership, profile, userRole, loading, error, refresh],
   );
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;

@@ -1,4 +1,4 @@
-export type UserRole = "owner" | "member";
+export type UserRole = "admin" | "gestor" | "member" | "vendedor" | "owner";
 
 export type RaffleStatus = "active" | "closed" | "draft";
 export type NumberStatus = "available" | "reserved" | "sold";
@@ -9,6 +9,7 @@ export interface Profile {
   id: string;
   name: string;
   email: string;
+  role: UserRole;
   created_at: string;
 }
 

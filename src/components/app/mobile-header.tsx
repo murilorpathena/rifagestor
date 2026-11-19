@@ -29,10 +29,8 @@ export function MobileHeader({ title, showMenu = true, userMenu = false }: Mobil
           >
             <Menu className="size-5" />
           </button>
-        ) : (
-          <Logo compact className="mr-1" />
-        )}
-        <Link href="/" className="flex items-center gap-2">
+        ) : null}
+        <Link href="/" className="flex items-center gap-2 focus-ring rounded-lg">
           <Logo compact />
           <span className="hidden sm:inline font-bold tracking-tight">Rifa<span className="text-[var(--ink)]">Gestor</span></span>
         </Link>

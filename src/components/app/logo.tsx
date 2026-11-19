@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { Ticket } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Logo({ compact = false, className }: { compact?: boolean; className?: string }) {
   return (
-    <Link href="/" className={cn("focus-ring inline-flex items-center gap-2.5 rounded-lg", className)}>
+    <span className={cn("inline-flex items-center gap-2.5 rounded-lg", className)}>
       <span className="grid size-8 place-items-center rounded-lg bg-[var(--ink)] text-white">
         <Ticket className="size-4.5" strokeWidth={2} />
       </span>
@@ -13,6 +12,6 @@ export function Logo({ compact = false, className }: { compact?: boolean; classN
           Rifa<span className="text-[var(--ink)]">Gestor</span>
         </span>
       ) : null}
-    </Link>
+    </span>
   );
 }

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart2, Ticket, ShoppingCart, Users, Settings } from "lucide-react";
+import { BarChart2, Ticket, ShoppingCart, Users, Settings, ShieldUser, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useWorkspace } from "@/components/providers/workspace-provider";
 
 interface NavItem {
   href: string;
@@ -11,16 +12,38 @@ interface NavItem {
   icon: React.ElementType;
 }
 
-const items: NavItem[] = [
+const adminItems: NavItem[] = [
+  { href: "/painel", label: "Painel", icon: BarChart2 },
+  { href: "/admin/usuarios", label: "Usuários", icon: ShieldUser },
+  { href: "/configuracoes", label: "Configurações", icon: Settings },
+];
+
+const gestorItems: NavItem[] = [
   { href: "/painel", label: "Painel", icon: BarChart2 },
   { href: "/numeros", label: "Números", icon: Ticket },
   { href: "/vendas", label: "Vendas", icon: ShoppingCart },
-  { href: "/equipe", label: "Equipe", icon: Users },
+  { href: "/equipe", label: "Vendedores", icon: Users },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
+];
+
+const vendedorItems: NavItem[] = [
+  { href: "/painel", label: "Painel", icon: BarChart2 },
+  { href: "/vendas/historico", label: "Minhas Vendas", icon: CreditCard },
+  { href: "/numeros", label: "Meus Números", icon: Ticket },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { userRole, membership } = useWorkspace();
+
+  let items: NavItem[];
+  if (userRole === 'admin') {
+    items = adminItems;
+  } else if (userRole === 'gestor' || (membership && membership.role === 'owner')) {
+    items = gestorItems;
+  } else {
+    items = vendedorItems;
+  }
 
   return (
     <nav className="fixed bottom-0 z-[60] flex w-full items-center justify-around rounded-t-xl border-t border-[var(--line)] bg-white p-2 px-3 shadow-sm">
