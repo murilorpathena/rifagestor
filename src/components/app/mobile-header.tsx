@@ -45,7 +45,7 @@ export function MobileHeader({ title, showMenu = true, userMenu = true }: Mobile
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 flex h-14 items-center gap-2 border-b border-[var(--line)] bg-white/95 px-3 backdrop-blur-md lg:left-64">
+      <header className="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between border-b border-[var(--line)] bg-white/95 px-3 backdrop-blur-md lg:left-64">
         {showMenu ? (
           <button
             type="button"
@@ -63,7 +63,7 @@ export function MobileHeader({ title, showMenu = true, userMenu = true }: Mobile
 
         <Link
           href="/"
-          className="focus-ring flex items-center gap-1.5 rounded-lg px-3 py-2 text-[var(--ink)] font-bold tracking-tight"
+          className="focus-ring flex items-center gap-1.5 rounded-lg px-3 py-2 text-[var(--ink)] font-bold tracking-tight flex-1 text-center"
         >
           Rifa<span className="text-[var(--ink)]">Gestor</span>
         </Link>

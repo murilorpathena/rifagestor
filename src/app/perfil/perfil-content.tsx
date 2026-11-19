@@ -11,6 +11,7 @@ import { useToast } from "@/components/providers/toast-provider";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 const roleLabels: Record<string, string> = {
   admin: "Administrador",
@@ -131,161 +132,183 @@ export default function PerfilContent() {
       <div className="px-4 pt-16 space-y-5">
         <h1 className="text-xl font-extrabold tracking-tight">Perfil</h1>
 
-        <section className="rounded-2xl border border-[var(--line)] bg-white p-4 card-shadow">
-          <div className="mb-4 flex items-center gap-4">
-            <div className="grid size-14 place-items-center rounded-2xl bg-[#f7f7f7] text-lg font-extrabold">
-              {profile?.name?.[0] ?? "U"}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="size-4" /> Dados da conta
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="mb-4 flex items-center gap-4">
+              <div className="grid size-14 place-items-center rounded-2xl bg-[#f7f7f7] text-lg font-extrabold">
+                {profile?.name?.[0] ?? "U"}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate font-bold">{profile?.name ?? "Usuário"}</p>
+                <p className="flex items-center gap-1.5 truncate text-xs text-[var(--muted)]">
+                  <Mail className="size-3.5" /> {profile?.email ?? "—"}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="truncate font-bold">{profile?.name ?? "Usuário"}</p>
-              <p className="flex items-center gap-1.5 truncate text-xs text-[var(--muted)]">
-                <Mail className="size-3.5" /> {profile?.email ?? "—"}
-              </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-[var(--line)] bg-[#f7f7f7] p-3">
+                <p className="text-xs text-[var(--muted)]">Organização</p>
+                <p className="text-sm font-medium">{organization?.name ?? "—"}</p>
+              </div>
+              <div className="rounded-xl border border-[var(--line)] bg-[#f7f7f7] p-3">
+                <p className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
+                  <ShieldCheck className="size-3.5" /> Função
+                </p>
+                <p className="text-sm font-bold">{roleLabels[userRole ?? ""] ?? "—"}</p>
+              </div>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-[var(--line)] bg-[#f7f7f7] p-3">
-              <p className="text-xs text-[var(--muted)]">Organização</p>
-              <p className="text-sm font-medium">{organization?.name ?? "—"}</p>
-            </div>
-            <div className="rounded-xl border border-[var(--line)] bg-[#f7f7f7] p-3">
-              <p className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
-                <ShieldCheck className="size-3.5" /> Função
-              </p>
-              <p className="text-sm font-bold">{roleLabels[userRole ?? ""] ?? "—"}</p>
-            </div>
-          </div>
-        </section>
+          </CardContent>
+        </Card>
 
         {/* Edição de dados pessoais */}
-        <section className="rounded-2xl border border-[var(--line)] bg-white p-4 card-shadow">
-          <h2 className="mb-4 text-base font-bold">Dados pessoais</h2>
-
-          {editingName ? (
-            <form onSubmit={(e) => { e.preventDefault(); void handleSaveName(); }} className="grid gap-3">
-              <Field label="Nome">
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  defaultValue={profile?.name ?? ""}
-                  required
-                  autoFocus
-                />
-              </Field>
-              <div className="flex items-center gap-2">
-                <Button type="submit" loading={saving} size="sm">
-                  Salvar
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => setEditingName(false)}>
-                  Cancelar
-                </Button>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldAlert className="size-4" /> Dados pessoais
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {editingName ? (
+              <form onSubmit={(e) => { e.preventDefault(); void handleSaveName(); }} className="grid gap-3 p-4">
+                <Field label="Nome">
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    defaultValue={profile?.name ?? ""}
+                    required
+                    autoFocus
+                  />
+                </Field>
+                <div className="flex items-center gap-2">
+                  <Button type="submit" loading={saving} size="sm">
+                    Salvar
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setEditingName(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex items-center justify-between gap-2 p-4">
+                <span className="text-sm text-[var(--muted)]">Nome</span>
+                <button
+                  type="button"
+                  onClick={() => { setName(profile?.name ?? ""); setEditingName(true); }}
+                  className="focus-ring inline-flex items-center gap-1 rounded-lg text-xs font-medium text-[var(--ink)] hover:bg-[#f7f7f7]"
+                >
+                  <ShieldAlert className="size-3.5" /> Editar
+                </button>
               </div>
-            </form>
-          ) : (
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm text-[var(--muted)]">Nome</span>
-              <button
-                type="button"
-                onClick={() => { setName(profile?.name ?? ""); setEditingName(true); }}
-                className="focus-ring inline-flex items-center gap-1 rounded-lg text-xs font-medium text-[var(--ink)] hover:bg-[#f7f7f7]"
-              >
-                <ShieldAlert className="size-3.5" /> Editar
-              </button>
-            </div>
-          )}
+            )}
 
-          {editingEmail ? (
-            <form onSubmit={(e) => { e.preventDefault(); void handleSaveEmail(); }} className="grid gap-3 mt-4 border-t pt-4">
-              <Field label="E-mail">
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  defaultValue={profile?.email ?? ""}
-                  required
-                  autoFocus
-                />
-              </Field>
-              <p className="text-xs text-[var(--muted)]">
-                Um e-mail de confirmação será enviado para o novo endereço.
-              </p>
-              <div className="flex items-center gap-2">
-                <Button type="submit" loading={saving} size="sm">
-                  Salvar
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => setEditingEmail(false)}>
-                  Cancelar
-                </Button>
+            {editingEmail ? (
+              <form onSubmit={(e) => { e.preventDefault(); void handleSaveEmail(); }} className="grid gap-3 mt-4 border-t pt-4 p-4">
+                <Field label="E-mail">
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    defaultValue={profile?.email ?? ""}
+                    required
+                    autoFocus
+                  />
+                </Field>
+                <p className="text-xs text-[var(--muted)]">
+                  Um e-mail de confirmação será enviado para o novo endereço.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button type="submit" loading={saving} size="sm">
+                    Salvar
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setEditingEmail(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex items-center justify-between gap-2 mt-4 border-t pt-4 p-4">
+                <span className="text-sm text-[var(--muted)]">E-mail</span>
+                <button
+                  type="button"
+                  onClick={() => { setEmail(profile?.email ?? ""); setEditingEmail(true); }}
+                  className="focus-ring inline-flex items-center gap-1 rounded-lg text-xs font-medium text-[var(--ink)] hover:bg-[#f7f7f7]"
+                >
+                  <ShieldAlert className="size-3.5" /> Editar
+                </button>
               </div>
-            </form>
-          ) : (
-            <div className="flex items-center justify-between gap-2 mt-4 border-t pt-4">
-              <span className="text-sm text-[var(--muted)]">E-mail</span>
-              <button
-                type="button"
-                onClick={() => { setEmail(profile?.email ?? ""); setEditingEmail(true); }}
-                className="focus-ring inline-flex items-center gap-1 rounded-lg text-xs font-medium text-[var(--ink)] hover:bg-[#f7f7f7]"
-              >
-                <ShieldAlert className="size-3.5" /> Editar
-              </button>
-            </div>
-          )}
-        </section>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Edição de senha */}
-        <section className="rounded-2xl border border-[var(--line)] bg-white p-4 card-shadow">
-          <h2 className="mb-4 text-base font-bold">Senha</h2>
-
-          {editingPassword ? (
-            <form onSubmit={(e) => { e.preventDefault(); void handleSavePassword(); }} className="grid gap-3">
-              <Field label="Nova senha">
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  minLength={6}
-                  required
-                  autoFocus
-                />
-              </Field>
-              <Field label="Confirme a nova senha">
-                <Input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  minLength={6}
-                  required
-                />
-              </Field>
-              <div className="flex items-center gap-2">
-                <Button type="submit" loading={saving} size="sm">
-                  Salvar senha
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => setEditingPassword(false)}>
-                  Cancelar
-                </Button>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Key className="size-4" /> Senha
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {editingPassword ? (
+              <form onSubmit={(e) => { e.preventDefault(); void handleSavePassword(); }} className="grid gap-3 p-4">
+                <Field label="Nova senha">
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    minLength={6}
+                    required
+                    autoFocus
+                  />
+                </Field>
+                <Field label="Confirme a nova senha">
+                  <Input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    minLength={6}
+                    required
+                  />
+                </Field>
+                <div className="flex items-center gap-2">
+                  <Button type="submit" loading={saving} size="sm">
+                    Salvar senha
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setEditingPassword(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex items-center justify-between gap-2 p-4">
+                <span className="text-sm text-[var(--muted)]">Senha</span>
+                <button
+                  type="button"
+                  onClick={() => setEditingPassword(true)}
+                  className="focus-ring inline-flex items-center gap-1 rounded-lg text-xs font-medium text-[var(--ink)] hover:bg-[#f7f7f7]"
+                >
+                  <Key className="size-3.5" /> Alterar senha
+                </button>
               </div>
-            </form>
-          ) : (
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
             <button
               type="button"
-              onClick={() => setEditingPassword(true)}
-              className="focus-ring inline-flex items-center gap-1 rounded-lg text-xs font-medium text-[var(--ink)] hover:bg-[#f7f7f7]"
+              className="focus-ring w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-left font-semibold text-[var(--danger)] transition hover:bg-red-100"
+              onClick={() => void signOut()}
             >
-              <Key className="size-3.5" /> Alterar senha
+              <LogOut className="mr-2 size-4" /> Sair da conta
             </button>
-          )}
-        </section>
-
-        <div className="rounded-xl border border-[var(--line)] bg-white p-4 card-shadow">
-          <button
-            type="button"
-            className="focus-ring w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-left font-semibold text-[var(--danger)] transition hover:bg-red-100"
-            onClick={() => void signOut()}
-          >
-            <LogOut className="mr-2 size-4" /> Sair da conta
-          </button>
-        </div>
+          </CardContent>
+        </Card>
       </div>
       <BottomNav />
     </main>
