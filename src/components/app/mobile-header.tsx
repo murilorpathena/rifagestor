@@ -19,6 +19,7 @@ interface MobileHeaderProps {
 export function MobileHeader({ title, showMenu = true, userMenu = true }: MobileHeaderProps) {
   const [navOpen, setNavOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const { signOut } = useAuth();
   const { userRole, membership, profile } = useWorkspace();
@@ -42,6 +43,18 @@ export function MobileHeader({ title, showMenu = true, userMenu = true }: Mobile
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [navOpen, userOpen]);
+
+  // Fecha menu do usuário ao clicar fora
+  useEffect(() => {
+    if (!userOpen) return;
+    const onClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [userOpen]);
 
   return (
     <>
