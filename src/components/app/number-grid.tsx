@@ -70,7 +70,7 @@ export function NumberGrid({
         )}
       </div>
 
-      <div className="grid grid-cols-4 gap-1.5 px-1 max-w-[460px] mx-auto">
+      <div className="grid grid-cols-4 gap-1.5 px-1 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12">
         {sorted.map((number) => {
           const selected = selectedNumbers.has(number.id);
           const status = statusStyle(number.status);
