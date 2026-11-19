@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, TicketCheck } from "lucide-react";
+import { LoaderCircle } from "@/components/ui/loader-circle";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
@@ -18,6 +19,54 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Enquanto verifica a sessão, não renderiza o formulário.
+  if (loading) {
+    return (
+      <main className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="relative hidden overflow-hidden bg-[#f7f7f7] p-12 text-[var(--ink)] lg:flex lg:flex-col lg:justify-between">
+          <div className="relative max-w-xl">
+            <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)]">
+              <ShieldCheck className="size-3.5" /> Acesso interno
+            </span>
+            <h1 className="text-balance text-4xl font-extrabold leading-[1.12] tracking-[-0.035em] xl:text-5xl">
+              Sua rifa organizada, do primeiro número à última venda.
+            </h1>
+            <p className="mt-6 max-w-lg text-lg leading-8 text-[var(--muted)]">
+              Controle números, cadastre compradores, acompanhe pagamentos e organize toda a equipe em um só lugar.
+            </p>
+            <div className="mt-10 grid grid-cols-3 gap-3">
+              {[
+                ["Números", "visão clara"],
+                ["Vendas", "PDV rápido"],
+                ["Equipe", "acesso único"],
+              ].map(([title, subtitle]) => (
+                <div key={title} className="rounded-lg border border-[var(--line)] bg-white p-4">
+                  <p className="font-bold">{title}</p>
+                  <p className="mt-1 text-xs text-[var(--muted-soft)]">{subtitle}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="relative text-xs text-[var(--muted-soft)]">Gestão privada para sua operação de rifas.</p>
+        </section>
+        <section className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-10">
+          <div className="w-full max-w-[430px] animate-fade-up">
+            <Logo className="mb-10 lg:hidden" />
+            <div className="flex flex-col items-center justify-center py-12">
+              <LoaderCircle className="size-8 animate-spin text-[var(--ink)]" />
+              <p className="mt-3 text-sm text-[var(--muted)]">Verificando sua sessão...</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  // Já está logado: redireciona para o painel.
+  if (user) {
+    return null;
+  }
 
   useEffect(() => {
     if (!loading && user) router.replace("/painel");
