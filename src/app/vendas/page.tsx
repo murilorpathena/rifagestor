@@ -15,7 +15,7 @@ import {
   selectableNumbers,
   validSelectedNumbers,
 } from "@/lib/sale";
-import { Ticket, CheckCircle2, AlertTriangle, LoaderCircle, Plus, Minus, Search, Paperclip, Image, Send, Bot } from "lucide-react";
+import { Ticket, CheckCircle2, AlertTriangle, LoaderCircle, Plus, Minus, Search, Paperclip, Bot } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/providers/toast-provider";
 
@@ -216,7 +216,6 @@ export default function VendasPage() {
       });
       if (rpcError) throw rpcError;
 
-      // Upload do comprovante se houver
       let comprovanteUrl: string | null = null;
       if (comprovanteFile && saleId) {
         comprovanteUrl = await uploadComprovante(saleId);
@@ -290,12 +289,14 @@ export default function VendasPage() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Nova venda" />
-      <div className="px-4 pt-16 pb-6 space-y-5">
+      <div className="px-4 pt-12 pb-6 space-y-5">
         {/* Buyer form step */}
         {buyerStep === "form" && (
           <Card>
             <CardHeader>
-              <CardTitle>Comprador</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Ticket className="size-4" /> Comprador
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <BuyerForm initial={buyer} onSubmit={handleBuyerSubmit} loading={submitting} />
@@ -306,22 +307,34 @@ export default function VendasPage() {
         {/* Numbers selection step */}
         {buyerStep === "numbers" && (
           <>
+            {/* HEADER DO TOPO: comprador, resumo e botoes */}
             <Card>
-              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex-1">
-                  <CardTitle>Selecionar números</CardTitle>
-                  <p className="text-xs text-[var(--muted)]">
-                    {selectedList.length} de {availableNumbers.length} disponíveis
-                  </p>
+              <CardHeader className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex-1">
+                    <CardTitle>Selecionar números</CardTitle>
+                    <p className="text-xs text-[var(--muted)]">
+                      {selectedList.length} de {availableNumbers.length} disponíveis
+                    </p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                    <Button size="sm" variant="outline" onClick={() => setBuyerStep("form")} className="w-full sm:w-auto">
+                      <Minus className="mr-1.5 size-3.5" /> Alterar comprador
+                    </Button>
+                    <Button size="sm" onClick={() => setBuyerStep("confirm")} disabled={selectedList.length === 0} className="w-full sm:w-auto bg-[var(--ink)] text-white">
+                      Continuar <Ticket className="ml-1 size-3.5" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setBuyerStep("form")}>
-                    <Minus className="mr-1.5 size-3.5" /> Alterar comprador
-                  </Button>
-                  <Button size="sm" onClick={() => setBuyerStep("confirm")} disabled={selectedList.length === 0} className="hidden sm:inline">
-                    Continuar <Ticket className="ml-1 size-3.5" />
-                  </Button>
-                </div>
+                {/* Resumo de selecao no topo */}
+                {selectedList.length > 0 && (
+                  <div className="mt-3 border-t border-[var(--line)] pt-3">
+                    <div className="flex items-center justify-between px-2">
+                      <span className="text-sm font-semibold">{selectedList.length} número(s) selecionado(s)</span>
+                      <span className="text-sm font-bold text-[var(--ink)]">{formatCurrency(total)}</span>
+                    </div>
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="p-0">
                 {/* Modo automático / sortear números */}
@@ -376,7 +389,7 @@ export default function VendasPage() {
                           onClick={() => handleNumberToggle(num.id)}
                           disabled={autoMode && selectedList.length >= autoQuantity && !selected}
                           className={cn(
-                            "aspect-square rounded-lg border flex items-center justify-center text-xs font-medium transition disabled:opacity-30 disabled:hover:bg-none",
+                            "aspect-square rounded-lg border flex items-center justify-center text-xs font-medium transition disabled:opacity-30 disabled:hover:bg-none disabled:hover:text-none",
                             selected
                               ? "ring-2 ring-[var(--ink)] ring-offset-1 bg-[var(--ink)] text-white"
                               : "bg-white text-[var(--ink)] border-[var(--line)] hover:bg-[#f7f7f7]",
@@ -388,25 +401,8 @@ export default function VendasPage() {
                     })}
                   </div>
                 </div>
-                {selectedList.length > 0 && (
-                  <div className="px-4 py-3 border-t border-[var(--line)]">
-                    <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-[var(--line)] bg-[#f7f7f7]">
-                      <span className="text-sm font-semibold">{selectedList.length} número(s)</span>
-                      <span className="text-sm font-bold text-[var(--ink)]">{formatCurrency(total)}</span>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
-
-            <div className="grid grid-cols-2 gap-3">
-              <Button size="sm" variant="ghost" onClick={() => setBuyerStep("form")} className="flex items-center justify-center gap-1 px-2 w-full">
-                <Minus className="size-3.5" /> Alterar comprador
-              </Button>
-              <Button size="sm" onClick={() => setBuyerStep("confirm")} disabled={selectedList.length === 0} className="w-full">
-                Continuar <Ticket className="ml-1 size-3.5" />
-              </Button>
-            </div>
           </>
         )}
 
@@ -414,7 +410,9 @@ export default function VendasPage() {
         {buyerStep === "confirm" && (
           <Card>
             <CardHeader>
-              <CardTitle>Confirme a venda</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Ticket className="size-4" /> Confirme a venda
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="px-4 py-4 space-y-4">
@@ -513,7 +511,7 @@ export default function VendasPage() {
                 <Button variant="ghost" size="sm" onClick={() => setBuyerStep("numbers")} className="flex items-center justify-center gap-1 px-2 w-full">
                   <Plus className="size-3.5" /> + número
                 </Button>
-                <Button size="lg" onClick={handleCompleteSale} loading={submitting || uploadingComprovante} disabled={submitting || uploadingComprovante} className="w-full">
+                <Button size="lg" onClick={handleCompleteSale} loading={submitting || uploadingComprovante} disabled={submitting || uploadingComprovante} className="w-full bg-[var(--ink)] text-white">
                   Finalizar venda <CheckCircle2 className="ml-1 size-3.5" />
                 </Button>
               </div>
@@ -540,7 +538,7 @@ export default function VendasPage() {
                         onClick={handleSendTelegram}
                         loading={sendingTelegram}
                         disabled={sendingTelegram}
-                        className="flex-1"
+                        className="flex-1 bg-[var(--ink)] text-white"
                       >
                         <Bot className="mr-2 size-3.5" /> Enviar para o Telegram
                       </Button>
@@ -560,7 +558,7 @@ export default function VendasPage() {
               </div>
             )}
 
-            <Button size="lg" className="mt-6 w-full" onClick={() => {
+            <Button size="lg" className="mt-6 w-full bg-[var(--ink)] text-white" onClick={() => {
               setSuccess(false);
               setBuyerStep("form");
               setBuyer({ name: "", cpf: "", email: "", whatsapp: "" });
