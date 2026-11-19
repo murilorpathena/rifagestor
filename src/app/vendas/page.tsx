@@ -15,8 +15,9 @@ import {
   selectableNumbers,
   validSelectedNumbers,
 } from "@/lib/sale";
-import { Ticket, CheckCircle2, AlertTriangle, LoaderCircle, Plus, Minus, Search } from "lucide-react";
+import { Ticket, CheckCircle2, AlertTriangle, LoaderCircle, Plus, Minus, Search, Paperclip, Image, Send, Bot } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { useToast } from "@/components/providers/toast-provider";
 
 interface NumberItem {
   id: string;
@@ -33,6 +34,7 @@ interface Buyer {
 
 export default function VendasPage() {
   const supabase = useClientSupabase();
+  const { showToast } = useToast();
   const [raffle, setRaffle] = useState<any>(null);
   const [numbers, setNumbers] = useState<NumberItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +49,11 @@ export default function VendasPage() {
   const [completedBuyerName, setCompletedBuyerName] = useState("");
   const [autoMode, setAutoMode] = useState(false);
   const [autoQuantity, setAutoQuantity] = useState(1);
+  const [comprovanteFile, setComprovanteFile] = useState<File | null>(null);
+  const [comprovantePreview, setComprovantePreview] = useState<string | null>(null);
+  const [uploadingComprovante, setUploadingComprovante] = useState(false);
+  const [sendingTelegram, setSendingTelegram] = useState(false);
+  const [currentSaleId, setCurrentSaleId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!supabase) {
@@ -116,7 +123,6 @@ export default function VendasPage() {
     const alreadySelected = new Set(selectedNumbers);
     const remaining = availableIds.filter((id) => !alreadySelected.has(id));
 
-    // Embaralhar (Fisher-Yates) e escolher os primeiros autoQuantity
     const shuffled = remaining.slice();
     for (let i = shuffled.length - 1; i > 0; i -= 1) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -136,6 +142,53 @@ export default function VendasPage() {
     setBuyerStep("numbers");
   };
 
+  const handleComprovanteChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Selecione apenas arquivos de imagem.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("A imagem deve ter no máximo 5 MB.");
+      return;
+    }
+    setComprovanteFile(file);
+    setComprovantePreview(URL.createObjectURL(file));
+    setError("");
+  };
+
+  const removeComprovante = () => {
+    setComprovanteFile(null);
+    setComprovantePreview(null);
+    if (comprovantePreview) URL.revokeObjectURL(comprovantePreview);
+  };
+
+  const uploadComprovante = async (saleId: string): Promise<string | null> => {
+    if (!supabase || !comprovanteFile) return null;
+    const sb = supabase;
+    setUploadingComprovante(true);
+    try {
+      const fileName = `${saleId}/${Date.now()}-${comprovanteFile.name}`;
+      const { error: uploadError } = await sb.storage
+        .from("comprovantes")
+        .upload(fileName, comprovanteFile, { cacheControl: "3600" });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = sb.storage
+        .from("comprovantes")
+        .getPublicUrl(fileName);
+
+      return urlData?.publicUrl ?? null;
+    } catch (err: any) {
+      setError(err?.message ?? "Erro ao fazer upload do comprovante.");
+      return null;
+    } finally {
+      setUploadingComprovante(false);
+    }
+  };
+
   const handleCompleteSale = async () => {
     if (!supabase) {
       setError("Supabase não configurado.");
@@ -149,7 +202,7 @@ export default function VendasPage() {
     setError("");
 
     try {
-      const { error: rpcError } = await supabase.rpc("create_sale", {
+      const { error: rpcError, data: saleId } = await supabase.rpc("create_sale", {
         p_raffle_id: raffle.id,
         p_buyer_name: buyer.name,
         p_buyer_cpf: buyer.cpf,
@@ -162,17 +215,50 @@ export default function VendasPage() {
         p_notes: null,
       });
       if (rpcError) throw rpcError;
+
+      // Upload do comprovante se houver
+      let comprovanteUrl: string | null = null;
+      if (comprovanteFile && saleId) {
+        comprovanteUrl = await uploadComprovante(saleId);
+        if (comprovanteUrl) {
+          await supabase
+            .from("sales")
+            .update({ comprovante_url: comprovanteUrl })
+            .eq("id", saleId);
+        }
+      }
+
       setCompletedBuyerName(buyer.name);
+      setCurrentSaleId(saleId);
       setSuccess(true);
       setBuyerStep("form");
       setSelectedNumbers(new Set());
       setBuyer({ name: "", cpf: "", email: "", whatsapp: "" });
+      setComprovanteFile(null);
+      setComprovantePreview(null);
       const nums = await supabase.from("raffle_numbers").select("id, number, status").eq("raffle_id", raffle.id).order("number", { ascending: true });
       setNumbers(nums.data ?? []);
     } catch (err: any) {
       setError(err.message ?? "Erro ao finalizar venda.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSendTelegram = async () => {
+    if (!supabase || !currentSaleId) return;
+    setSendingTelegram(true);
+    setError("");
+    try {
+      const { error } = await supabase.functions.invoke("send-telegram", {
+        body: { sale_id: currentSaleId },
+      });
+      if (error) throw error;
+      showToast("Notificação enviada ao Telegram com sucesso!", "success");
+      setSendingTelegram(false);
+    } catch (err: any) {
+      setError(err?.message ?? "Erro ao enviar notificação para o Telegram.");
+      setSendingTelegram(false);
     }
   };
 
@@ -355,9 +441,39 @@ export default function VendasPage() {
                   </div>
                   <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-[var(--line)] bg-[#f7f7f7]">
                     <span className="text-sm text-[var(--muted)]">Status</span>
-                    <span className={`text-xs font-medium block ${paymentStatus === "paid" ? "text-green-600" : "text-[var(--muted)]"}`}>
-                      {paymentStatus === "paid" ? "Pago" : "Pendente"}
+                    <span className={`text-xs font-medium block ${paymentStatus === "paid" ? "text-green-600" : paymentStatus === "pending" ? "text-amber-600" : "text-[var(--muted)]"}`}>
+                      {paymentStatus === "paid" ? "Pago" : paymentStatus === "pending" ? "Pendente" : "Cancelado"}
                     </span>
+                  </div>
+                </div>
+
+                {/* Upload de comprovante */}
+                <div className="space-y-3 pt-1">
+                  <label className="text-sm font-medium text-[var(--muted)]">Comprovante de pagamento</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleComprovanteChange}
+                      className="block w-full text-sm text-[var(--muted)] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[var(--line)] file:text-[var(--ink)] hover:file:bg-[#f7f7f7]"
+                    />
+                    {comprovantePreview && (
+                      <div className="relative">
+                        <img
+                          src={comprovantePreview}
+                          alt="Comprovante"
+                          className="w-24 h-24 rounded-lg border border-[var(--line)] object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={removeComprovante}
+                          className="absolute -right-1 -top-1 rounded-full bg-red-500 p-1 hover:bg-red-600"
+                          aria-label="Remover comprovante"
+                        >
+                          <span className="text-white text-[10px]">×</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -397,7 +513,7 @@ export default function VendasPage() {
                 <Button variant="ghost" size="sm" onClick={() => setBuyerStep("numbers")} className="flex items-center justify-center gap-1 px-2 w-full">
                   <Plus className="size-3.5" /> + número
                 </Button>
-                <Button size="lg" onClick={handleCompleteSale} loading={submitting} disabled={submitting} className="w-full">
+                <Button size="lg" onClick={handleCompleteSale} loading={submitting || uploadingComprovante} disabled={submitting || uploadingComprovante} className="w-full">
                   Finalizar venda <CheckCircle2 className="ml-1 size-3.5" />
                 </Button>
               </div>
@@ -412,11 +528,46 @@ export default function VendasPage() {
             </div>
             <h2 className="text-2xl font-extrabold">Venda realizada!</h2>
             <p className="mt-2 text-sm text-[var(--muted)]">Os números foram registrados para {completedBuyerName}.</p>
+
+            {currentSaleId && (
+              <div className="mt-6 w-full max-w-xs">
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-xs font-medium text-[var(--muted)] mb-3">Notificar no Telegram</p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleSendTelegram}
+                        loading={sendingTelegram}
+                        disabled={sendingTelegram}
+                        className="flex-1"
+                      >
+                        <Bot className="mr-2 size-3.5" /> Enviar para o Telegram
+                      </Button>
+                    </div>
+                    {comprovantePreview && (
+                      <div className="mt-3">
+                        <p className="text-xs text-[var(--muted)] mb-1">Comprovante anexado:</p>
+                        <img
+                          src={comprovantePreview}
+                          alt="Comprovante"
+                          className="w-20 h-20 rounded-lg border border-[var(--line)] object-cover"
+                        />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
             <Button size="lg" className="mt-6 w-full" onClick={() => {
               setSuccess(false);
               setBuyerStep("form");
               setBuyer({ name: "", cpf: "", email: "", whatsapp: "" });
               setSelectedNumbers(new Set());
+              setCurrentSaleId(null);
+              setComprovanteFile(null);
+              setComprovantePreview(null);
             }}>Nova venda</Button>
           </div>
         )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, Ticket, Lock } from "lucide-react";
+import { Save, Ticket, Lock, Paperclip, Smartphone } from "lucide-react";
 import { MobileHeader } from "@/components/app/mobile-header";
 import { BottomNav } from "@/components/app/bottom-nav";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,13 @@ export default function ConfiguracoesPage() {
     default_numbers_per_sale: "1",
     status: "active",
   });
+  const [telegramForm, setTelegramForm] = useState({
+    bot_token: "",
+    chat_id: "",
+  });
   const [saving, setSaving] = useState(false);
+  const [telegramLoading, setTelegramLoading] = useState(false);
+  const [telegramConfig, setTelegramConfig] = useState<{ bot_token: string; chat_id: string } | null>(null);
 
   useEffect(() => {
     if (!raffle) return;
@@ -42,6 +48,27 @@ export default function ConfiguracoesPage() {
       status: raffle.status,
     });
   }, [raffle]);
+
+  useEffect(() => {
+    void loadTelegramConfig();
+  }, [supabase, raffle?.organization_id]);
+
+  async function loadTelegramConfig() {
+    if (!supabase || !raffle?.organization_id) return;
+    const { data, error } = await supabase
+      .from("telegram_config")
+      .select("bot_token, chat_id")
+      .eq("organization_id", raffle.organization_id)
+      .maybeSingle();
+    if (error) {
+      showToast(error.message, "error");
+    } else {
+      setTelegramConfig(data ?? null);
+      if (data) {
+        setTelegramForm({ bot_token: data.bot_token, chat_id: data.chat_id });
+      }
+    }
+  }
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
@@ -100,6 +127,39 @@ export default function ConfiguracoesPage() {
     setSaving(false);
   }
 
+  async function handleTelegramSave(event: React.FormEvent) {
+    event.preventDefault();
+    if (!supabase || !raffle?.organization_id) return;
+
+    if (!telegramForm.bot_token.trim()) {
+      showToast("Informe o token do bot.", "error");
+      return;
+    }
+    if (!telegramForm.chat_id.trim()) {
+      showToast("Informe o ID do chat/grupo.", "error");
+      return;
+    }
+
+    setTelegramLoading(true);
+    try {
+      const { error } = await supabase
+        .from("telegram_config")
+        .upsert({
+          organization_id: raffle.organization_id,
+          bot_token: telegramForm.bot_token.trim(),
+          chat_id: telegramForm.chat_id.trim(),
+        });
+
+      if (error) throw error;
+      showToast("Configuração do Telegram salva.", "success");
+      setTelegramConfig({ ...telegramForm });
+    } catch (err: any) {
+      showToast(err?.message ?? "Erro ao salvar configuração do Telegram.", "error");
+    } finally {
+      setTelegramLoading(false);
+    }
+  }
+
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Rifa" userMenu />
@@ -133,119 +193,179 @@ export default function ConfiguracoesPage() {
             </CardContent>
           </Card>
         ) : (
-          <form onSubmit={handleSave} className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Ticket className="size-4" /> Dados da rifa
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="grid gap-3 sm:grid-cols-2 px-4 py-4">
-                  <Field label="Título" htmlFor="rifle-title" className="sm:col-span-2">
-                    <Input
-                      id="rifle-title"
-                      value={form.title}
-                      disabled={!canManage}
-                      onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-                    />
-                  </Field>
-                  <Field label="Prêmio" htmlFor="rifle-prize" className="sm:col-span-2">
-                    <Input
-                      id="rifle-prize"
-                      value={form.prize}
-                      disabled={!canManage}
-                      placeholder="Ex.: R$ 500,00 em vale-compras"
-                      onChange={(e) => setForm((p) => ({ ...p, prize: e.target.value }))}
-                    />
-                  </Field>
-                  <Field label="Descrição" htmlFor="rifle-description" className="sm:col-span-2">
-                    <Textarea
-                      id="rifle-description"
-                      value={form.description}
-                      disabled={!canManage}
-                      rows={3}
-                      onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                    />
-                  </Field>
-                  <Field label="Data do sorteio" htmlFor="rifle-date">
-                    <Input
-                      id="rifle-date"
-                      type="datetime-local"
-                      value={form.draw_date}
-                      disabled={!canManage}
-                      onChange={(e) => setForm((p) => ({ ...p, draw_date: e.target.value }))}
-                    />
-                  </Field>
-                  <Field label="Status" htmlFor="rifle-status">
-                    <Select
-                      id="rifle-status"
-                      value={form.status}
-                      disabled={!canManage}
-                      onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))}
-                    >
-                      <option value="active">Aberta para vendas</option>
-                      <option value="draft">Rascunho</option>
-                      <option value="closed">Encerrada</option>
-                    </Select>
-                  </Field>
-                </div>
-              </CardContent>
-            </Card>
+          <>
+            <form onSubmit={handleSave} className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Ticket className="size-4" /> Dados da rifa
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="grid gap-3 sm:grid-cols-2 px-4 py-4">
+                    <Field label="Título" htmlFor="rifle-title" className="sm:col-span-2">
+                      <Input
+                        id="rifle-title"
+                        value={form.title}
+                        disabled={!canManage}
+                        onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+                      />
+                    </Field>
+                    <Field label="Prêmio" htmlFor="rifle-prize" className="sm:col-span-2">
+                      <Input
+                        id="rifle-prize"
+                        value={form.prize}
+                        disabled={!canManage}
+                        placeholder="Ex.: R$ 500,00 em vale-compras"
+                        onChange={(e) => setForm((p) => ({ ...p, prize: e.target.value }))}
+                      />
+                    </Field>
+                    <Field label="Descrição" htmlFor="rifle-description" className="sm:col-span-2">
+                      <Textarea
+                        id="rifle-description"
+                        value={form.description}
+                        disabled={!canManage}
+                        rows={3}
+                        onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                      />
+                    </Field>
+                    <Field label="Data do sorteio" htmlFor="rifle-date">
+                      <Input
+                        id="rifle-date"
+                        type="datetime-local"
+                        value={form.draw_date}
+                        disabled={!canManage}
+                        onChange={(e) => setForm((p) => ({ ...p, draw_date: e.target.value }))}
+                      />
+                    </Field>
+                    <Field label="Status" htmlFor="rifle-status">
+                      <Select
+                        id="rifle-status"
+                        value={form.status}
+                        disabled={!canManage}
+                        onChange={(e) => setForm((p) => ({ ...p, status: e.target.value }))}
+                      >
+                        <option value="active">Aberta para vendas</option>
+                        <option value="draft">Rascunho</option>
+                        <option value="closed">Encerrada</option>
+                      </Select>
+                    </Field>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Números e preço</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="grid gap-3 sm:grid-cols-3 px-4 py-4">
-                  <Field label="Preço por número (R$)" htmlFor="rifle-price">
-                    <Input
-                      id="rifle-price"
-                      inputMode="decimal"
-                      value={form.price_reais}
-                      disabled={!canManage}
-                      onChange={(e) => setForm((p) => ({ ...p, price_reais: e.target.value }))}
-                    />
-                  </Field>
-                  <Field label="Total de números" htmlFor="rifle-total">
-                    <Input
-                      id="rifle-total"
-                      type="number"
-                      min={1}
-                      max={100000}
-                      value={form.total_numbers}
-                      disabled={!canManage}
-                      onChange={(e) => setForm((p) => ({ ...p, total_numbers: e.target.value }))}
-                    />
-                  </Field>
-                  <Field label="Números por venda" htmlFor="rifle-per-sale">
-                    <Input
-                      id="rifle-per-sale"
-                      type="number"
-                      min={1}
-                      value={form.default_numbers_per_sale}
-                      disabled={!canManage}
-                      onChange={(e) => setForm((p) => ({ ...p, default_numbers_per_sale: e.target.value }))}
-                    />
-                  </Field>
-                </div>
-                <div className="px-4 py-3 border-t border-[var(--line)]">
-                  <p className="text-xs text-[var(--muted)]">
-                    Ao aumentar o total, novos números são criados. Ao diminuir, apenas números disponíveis são removidos.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Números e preço</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="grid gap-3 sm:grid-cols-3 px-4 py-4">
+                    <Field label="Preço por número (R$)" htmlFor="rifle-price">
+                      <Input
+                        id="rifle-price"
+                        inputMode="decimal"
+                        value={form.price_reais}
+                        disabled={!canManage}
+                        onChange={(e) => setForm((p) => ({ ...p, price_reais: e.target.value }))}
+                      />
+                    </Field>
+                    <Field label="Total de números" htmlFor="rifle-total">
+                      <Input
+                        id="rifle-total"
+                        type="number"
+                        min={1}
+                        max={100000}
+                        value={form.total_numbers}
+                        disabled={!canManage}
+                        onChange={(e) => setForm((p) => ({ ...p, total_numbers: e.target.value }))}
+                      />
+                    </Field>
+                    <Field label="Números por venda" htmlFor="rifle-per-sale">
+                      <Input
+                        id="rifle-per-sale"
+                        type="number"
+                        min={1}
+                        value={form.default_numbers_per_sale}
+                        disabled={!canManage}
+                        onChange={(e) => setForm((p) => ({ ...p, default_numbers_per_sale: e.target.value }))}
+                      />
+                    </Field>
+                  </div>
+                  <div className="px-4 py-3 border-t border-[var(--line)]">
+                    <p className="text-xs text-[var(--muted)]">
+                      Ao aumentar o total, novos números são criados. Ao diminuir, apenas números disponíveis são removidos.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
 
-            {canManage ? (
-              <div className="flex justify-end">
-                <Button type="submit" size="lg" loading={saving}>
-                  <Save className="mr-2 size-4" /> Salvar configurações
-                </Button>
-              </div>
-            ) : null}
-          </form>
+              {/* Configuração do Telegram */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Smartphone className="size-4" /> Notificações por Telegram
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="px-4 py-4">
+                    <p className="text-xs text-[var(--muted)] mb-4">
+                      Configure o token do bot e o ID do grupo para receber notificações de vendas com comprovante de pagamento.
+                    </p>
+                    <form onSubmit={handleTelegramSave} className="space-y-3">
+                      <Field label="Token do Bot" htmlFor="telegram-bot-token">
+                        <Input
+                          id="telegram-bot-token"
+                          type="password"
+                          value={telegramForm.bot_token}
+                          disabled={!canManage}
+                          placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+                          onChange={(e) => setTelegramForm((p) => ({ ...p, bot_token: e.target.value }))}
+                        />
+                        <p className="text-xs text-[var(--muted)] mt-1">
+                          Crie um bot com o @BotFather no Telegram e copie o token.
+                        </p>
+                      </Field>
+                      <Field label="ID do Chat/Grupo" htmlFor="telegram-chat-id">
+                        <Input
+                          id="telegram-chat-id"
+                          value={telegramForm.chat_id}
+                          disabled={!canManage}
+                          placeholder="-1001234567890"
+                          onChange={(e) => setTelegramForm((p) => ({ ...p, chat_id: e.target.value }))}
+                        />
+                        <p className="text-xs text-[var(--muted)] mt-1">
+                          Adicione o bot ao grupo e envie qualquer mensagem para obter o ID do chat.
+                        </p>
+                      </Field>
+                      {telegramConfig && (
+                        <p className="text-xs text-[var(--muted)] mt-2">
+                          Configurado para: <span className="font-medium truncate block">{telegramConfig.chat_id}</span>
+                        </p>
+                      )}
+                      <div className="flex justify-end">
+                        <Button
+                          type="submit"
+                          size="sm"
+                          disabled={!canManage || telegramLoading}
+                          loading={telegramLoading}
+                        >
+                          <Paperclip className="mr-2 size-3.5" /> Salvar Telegram
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {canManage ? (
+                <div className="flex justify-end">
+                  <Button type="submit" size="lg" loading={saving}>
+                    <Save className="mr-2 size-4" /> Salvar configurações
+                  </Button>
+                </div>
+              ) : null}
+            </form>
+          </>
         )}
       </div>
       <BottomNav />
