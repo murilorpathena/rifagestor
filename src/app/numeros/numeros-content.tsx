@@ -24,6 +24,7 @@ export default function NumerosContent() {
 
   const [numbers, setNumbers] = useState<RaffleNumber[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [filter, setFilter] = useState<"all" | "available" | "reserved" | "sold">("all");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
@@ -81,10 +82,15 @@ export default function NumerosContent() {
   const reserved = numbers.filter((n) => n.status === "reserved").length;
   const sold = numbers.filter((n) => n.status === "sold").length;
 
+  const filteredNumbers = numbers.filter((n) => {
+    if (filter === "all") return true;
+    return n.status === filter;
+  });
+
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Números" userMenu />
-      <div className="px-4 pt-12 pb-6 space-y-5">
+      <div className="px-4 pt-8 pb-6 space-y-5">
         {wsLoading ? (
           <SkeletonNumberGrid />
         ) : !raffle ? (
@@ -181,9 +187,24 @@ export default function NumerosContent() {
               </span>
             </div>
 
+            {/* Filtro */}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-medium text-[var(--muted)]">Filtrar:</span>
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as "all" | "available" | "reserved" | "sold")}
+                className="focus:ring-2 focus:ring-[var(--ink)] rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-sm outline-none"
+              >
+                <option value="all">Todos</option>
+                <option value="available">Livres</option>
+                <option value="reserved">Reservados</option>
+                <option value="sold">Vendidos</option>
+              </select>
+            </div>
+
             {loading ? (
               <SkeletonNumberGrid />
-            ) : numbers.length === 0 ? (
+            ) : filteredNumbers.length === 0 ? (
               <Card>
                 <CardContent className="py-10 text-center">
                   <p className="text-sm text-[var(--muted)]">Nenhum número gerado.</p>
@@ -192,7 +213,7 @@ export default function NumerosContent() {
             ) : (
               <NumberGrid
                 raffle={raffle}
-                numbers={numbers}
+                numbers={filteredNumbers}
                 selectedNumbers={selected}
                 onToggle={toggle}
                 onSellSelected={sellSelected}
@@ -201,7 +222,7 @@ export default function NumerosContent() {
             )}
 
             {!canManage && selected.size > 0 ? (
-              <Button size="lg" className="w-full" onClick={() => sellSelected(numbers.filter((n) => selected.has(n.id)))}>
+              <Button size="lg" className="w-full" onClick={() => sellSelected(filteredNumbers.filter((n) => selected.has(n.id)))}>
                 Vender {selected.size} número(s) <ArrowRight className="ml-2 size-4" />
               </Button>
             ) : null}
