@@ -1,0 +1,11 @@
+[build]
+  command = "npm run build"
+  publish = "out"
+
+# O projeto usa output: "export" do Next.js (site 100% estático).
+# O @netlify/plugin-nextjs não é necessário e entra em conflito com
+# o diretório "out". Desabilite o plugin na UI do Netlify se ainda
+# estiver ativo: Site configuration → Build & deploy → Plugins.
+
+[build.environment]
+  NODE_VERSION = "20"
