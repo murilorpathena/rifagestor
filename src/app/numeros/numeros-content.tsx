@@ -76,6 +76,7 @@ export default function NumerosContent() {
     router.push("/vendas");
   }
 
+  const total = numbers.length;
   const available = numbers.filter((n) => n.status === "available").length;
   const reserved = numbers.filter((n) => n.status === "reserved").length;
   const sold = numbers.filter((n) => n.status === "sold").length;
@@ -83,7 +84,7 @@ export default function NumerosContent() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Números" userMenu />
-      <div className="px-4 pt-16 space-y-6 pb-6">
+      <div className="px-4 pt-12 pb-6 space-y-5">
         {wsLoading ? (
           <SkeletonNumberGrid />
         ) : !raffle ? (
@@ -94,7 +95,7 @@ export default function NumerosContent() {
           </Card>
         ) : (
           <>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <h1 className="text-xl font-extrabold tracking-tight">{raffle.title}</h1>
                 <p className="text-sm text-[var(--muted)]">
@@ -111,49 +112,69 @@ export default function NumerosContent() {
               ) : null}
             </div>
 
-            {/* Contadores */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* KPIs - 4 cards */}
+            <div className="grid grid-cols-2 gap-3">
               <Card>
-                <CardContent className="pt-5 pb-4">
+                <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-lg font-bold">{available}</p>
+                      <p className="text-lg font-bold text-[var(--ink)]">{available}</p>
                       <p className="text-[10px] uppercase text-[var(--muted)]">Livres</p>
                     </div>
-                    <div className="w-8 h-8 rounded border border-[var(--line)] bg-white flex items-center justify-center" />
+                    <div className="w-8 h-8 rounded-xl border border-[var(--line)] bg-white flex items-center justify-center text-[10px]">
+                      L
+                    </div>
                   </div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="pt-5 pb-4">
+                <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-lg font-bold">{reserved}</p>
+                      <p className="text-lg font-bold text-[var(--ink)]">{reserved}</p>
                       <p className="text-[10px] uppercase text-[var(--muted)]">Reservados</p>
                     </div>
-                    <div className="w-8 h-8 rounded border border-[var(--line)] bg-[#f0f0f0] flex items-center justify-center" />
+                    <div className="w-8 h-8 rounded-xl border border-[var(--line)] bg-[#f7f7f7] flex items-center justify-center text-[10px] text-[var(--muted)]">
+                      R
+                    </div>
                   </div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="pt-5 pb-4">
+                <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-lg font-bold">{sold}</p>
+                      <p className="text-lg font-bold text-[var(--ink)]">{sold}</p>
                       <p className="text-[10px] uppercase text-[var(--muted)]">Vendidos</p>
                     </div>
-                    <div className="w-8 h-8 rounded bg-[var(--ink)] flex items-center justify-center" />
+                    <div className="w-8 h-8 rounded-xl bg-[var(--ink)] flex items-center justify-center text-white text-[10px]">
+                      V
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-lg font-bold text-[var(--ink)]">{total}</p>
+                      <p className="text-[10px] uppercase text-[var(--muted)]">Total</p>
+                    </div>
+                    <div className="w-8 h-8 rounded-xl border border-[var(--line)] bg-[#f7f7f7] flex items-center justify-center text-[10px] text-[var(--muted)]">
+                      T
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
+            {/* Legenda */}
             <div className="flex flex-wrap items-center gap-3 text-[11px] text-[var(--muted)]">
               <span className="flex items-center gap-1.5">
                 <span className="inline-block size-3 rounded border border-[var(--line)] bg-white" /> Livre
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="inline-block size-3 rounded border border-[var(--line)] bg-[#f0f0f0]" /> Reservado
+                <span className="inline-block size-3 rounded border border-[var(--line)] bg-[#f7f7f7]" /> Reservado
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="inline-block size-3 rounded bg-[var(--ink)]" /> Vendido
