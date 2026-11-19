@@ -63,21 +63,10 @@ export function MobileHeader({ title, showMenu = true, userMenu = true }: Mobile
 
         <Link
           href="/"
-          className={cn(
-            "focus-ring flex shrink-0 items-center gap-2 rounded-lg",
-            // No desktop, o logo fica por conta do Sidebar; evita duplicação com o header.
-            "lg:hidden",
-          )}
+          className="focus-ring flex items-center gap-1.5 rounded-lg px-3 py-2 text-[var(--ink)] font-bold tracking-tight"
         >
-          <Logo compact />
-          <span className="hidden text-sm font-bold tracking-tight sm:inline lg:hidden">
-            Rifa<span className="text-[var(--ink)]">Gestor</span>
-          </span>
+          Rifa<span className="text-[var(--ink)]">Gestor</span>
         </Link>
-
-        <h1 className="min-w-0 flex-1 truncate text-center text-sm font-bold tracking-tight sm:text-base lg:pl-2 lg:text-left">
-          {title}
-        </h1>
 
         <div className="flex shrink-0 items-center">
           {userMenu ? (
