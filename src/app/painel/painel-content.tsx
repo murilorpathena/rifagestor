@@ -5,7 +5,7 @@ import { BottomNav } from "@/components/app/bottom-nav";
 import { MobileHeader } from "@/components/app/mobile-header";
 import { StatCard } from "@/components/app/stat-card";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
-import { BarChart2, Ticket, ShoppingCart, Clock, Check } from "lucide-react";
+import { BarChart2, Ticket, ShoppingCart, Clock, Check, TrendingUp, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useWorkspace } from "@/components/providers/workspace-provider";
 import { useEffect, useState } from "react";
@@ -38,11 +38,13 @@ export default function PainelContent() {
 
   if (!supabase) {
     return (
-      <main className="min-h-screen pb-24 px-4 py-6">
+      <main className="min-h-screen pb-24 px-4 pt-16">
         <MobileHeader title="Painel" userMenu />
         <Card>
           <CardHeader>
-            <CardTitle className="text-[var(--danger)]">Supabase não configurado</CardTitle>
+            <CardTitle className="text-[var(--danger)] flex items-center gap-2">
+              <AlertCircle className="size-4" /> Supabase não configurado
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-[var(--muted)]">
@@ -222,8 +224,9 @@ export default function PainelContent() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Painel" userMenu />
-      <div className="px-4 pt-16 pb-6 space-y-6 pb-6">
-        <div className="flex items-center justify-between">
+      <div className="px-4 pt-16 pb-6 space-y-6">
+        {/* Cabeçalho */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-extrabold tracking-tight">Painel</h1>
             <p className="text-sm text-[var(--muted)]">
@@ -235,59 +238,84 @@ export default function PainelContent() {
           {!isVendedor && (
             <Link
               href="/vendas"
-              className="focus-ring inline-flex items-center gap-1.5 rounded-lg bg-[var(--ink)] px-3 py-2 text-xs font-semibold text-white hover:bg-black active:scale-95 transition"
+              className="focus-ring inline-flex items-center gap-1.5 rounded-xl bg-[var(--ink)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-black active:scale-95 transition"
             >
-              Nova venda <ShoppingCart className="size-3.5" />
+              Nova venda <ShoppingCart className="size-4" />
             </Link>
           )}
         </div>
 
-        {/* Estatísticas */}
+        {/* Estatísticas principais */}
         <div className="grid grid-cols-2 gap-4">
           {loading ? (
             <>
-              <SkeletonStat label="Organizações" />
-              <SkeletonStat label="Compradores" />
-              <SkeletonStat label="Números livres" />
+              <SkeletonStat label="Vendas" />
               <SkeletonStat label="Receita" />
+              <SkeletonStat label="Números livres" />
+              <SkeletonStat label="Vendidos" />
             </>
           ) : stats ? (
             <>
-              <StatCard label="Organizações" value={stats.totalOrgs} icon={BarChart2} />
-              <StatCard label="Compradores" value={stats.totalBuyers} icon={Ticket} />
-              <StatCard label="Números livres" value={stats.available} sub={`de ${stats.totalNumbers ?? stats.sold + stats.available + stats.reserved}`} icon={Check} />
-              <StatCard label="Receita" value={formatCurrency(stats.totalRevenue)} sub="Vendas pagas" icon={ShoppingCart} />
+              <StatCard
+                label="Vendas realizadas"
+                value={stats.sold ?? 0}
+                sub={`de ${(stats.totalNumbers ?? stats.sold + stats.available + stats.reserved) || 0} números`}
+                icon={Ticket}
+              />
+              <StatCard
+                label="Receita"
+                value={formatCurrency(stats.totalRevenue)}
+                sub="Vendas pagas"
+                icon={ShoppingCart}
+              />
+              <StatCard
+                label="Números livres"
+                value={stats.available}
+                sub={`Reservados: ${stats.reserved} • Vendidos: ${stats.sold}`}
+                icon={Check}
+              />
+              <StatCard
+                label="Compradores"
+                value={stats.totalBuyers}
+                sub={isVendedor ? "Seus compradores" : "Total de compradores"}
+                icon={BarChart2}
+              />
             </>
           ) : null}
         </div>
 
-        {/* Erro */}
-        {!loading && error && !stats ? (
+        {/* Ações rápidas */}
+        {!isVendedor && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-[var(--danger)] flex items-center gap-2">
-                <Clock className="size-4" /> Erro ao carregar o painel
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="size-4" /> Ações rápidas
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-[var(--muted)]">{error}</p>
+            <CardContent className="p-0">
+              <div className="grid grid-cols-2 gap-3">
+                <Link
+                  href="/vendas"
+                  className="focus-ring flex items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-white px-4 py-4 text-sm font-medium text-[var(--ink)] hover:bg-[#f7f7f7] active:scale-95 transition"
+                >
+                  <ShoppingCart className="size-5" /> Nova venda
+                </Link>
+                <Link
+                  href="/numeros"
+                  className="focus-ring flex items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-white px-4 py-4 text-sm font-medium text-[var(--ink)] hover:bg-[#f7f7f7] active:scale-95 transition"
+                >
+                  <Ticket className="size-5" /> Gerenciar números
+                </Link>
+              </div>
             </CardContent>
-            <div className="px-5 pt-4 sm:px-6 sm:pt-5">
-              <button
-                onClick={() => { setError(null); setLoading(true); void loadStats(); }}
-                className="focus-ring inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink)] hover:underline"
-              >
-                <Clock className="size-3.5" /> Tentar novamente
-              </button>
-            </div>
           </Card>
-        ) : null}
+        )}
 
         {/* Últimas vendas */}
         <Card>
           <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 className="CardTitle">Últimas vendas</h2>
+              <CardTitle>Últimas vendas</CardTitle>
               {!isVendedor && (
                 <p className="text-xs text-[var(--muted)]">Vendas mais recentes da rifa</p>
               )}
@@ -317,8 +345,8 @@ export default function PainelContent() {
                     </div>
                     <div className="text-right min-w-[120px]">
                       <p className="text-sm font-bold text-[var(--ink)]">{formatCurrency(sale.total_cents)}</p>
-                      <span className={`text-xs font-medium block ${sale.payment_status === "paid" ? "text-green-600" : "text-[var(--muted)]"}`}>
-                        {sale.payment_status === "paid" ? "Pago" : "Pendente"}
+                      <span className={`text-xs font-medium block ${sale.payment_status === "paid" ? "text-green-600" : sale.payment_status === "pending" ? "text-amber-600" : "text-[var(--muted)]"}`}>
+                        {sale.payment_status === "paid" ? "Pago" : sale.payment_status === "pending" ? "Pendente" : "Cancelado"}
                       </span>
                     </div>
                   </div>
