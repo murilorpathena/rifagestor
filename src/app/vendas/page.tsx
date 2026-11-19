@@ -7,6 +7,13 @@ import { MobileHeader } from "@/components/app/mobile-header";
 import { BuyerForm } from "@/components/app/buyer-form";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
+import {
+  calculateSaleTotalCents,
+  canFinalizeSale,
+  isNumberSelectable,
+  selectableNumbers,
+  validSelectedNumbers,
+} from "@/lib/sale";
 import { Ticket, CheckCircle2, AlertTriangle, LoaderCircle, Plus, Minus, Search } from "lucide-react";
 
 interface NumberItem {
@@ -28,7 +35,6 @@ export default function VendasPage() {
   const [numbers, setNumbers] = useState<NumberItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedNumbers, setSelectedNumbers] = useState<Set<string>>(new Set());
-  const [quantity, setQuantity] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState("pix");
   const [paymentStatus, setPaymentStatus] = useState("paid");
   const [buyerStep, setBuyerStep] = useState<"form" | "numbers" | "confirm">("form");
@@ -36,6 +42,7 @@ export default function VendasPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [completedBuyerName, setCompletedBuyerName] = useState("");
 
   useEffect(() => {
     if (!supabase) {
@@ -68,17 +75,30 @@ export default function VendasPage() {
           .eq("raffle_id", r.id)
           .order("number", { ascending: true });
         setNumbers(n ?? []);
+        // Números escolhidos na grade de /numeros.
+        try {
+          const raw = sessionStorage.getItem("rifa:selected-numbers");
+          if (raw) {
+            const ids = JSON.parse(raw) as string[];
+            setSelectedNumbers(new Set(ids.filter((id) => n?.some((item) => item.id === id))));
+            sessionStorage.removeItem("rifa:selected-numbers");
+          }
+        } catch {
+          sessionStorage.removeItem("rifa:selected-numbers");
+        }
       }
       setLoading(false);
     })();
   }, [supabase]);
 
   const price = raffle?.ticket_price_cents ?? 0;
-  const availableNumbers = numbers.filter((n) => n.status === "available");
-  const selectedList = numbers.filter((n) => selectedNumbers.has(n.id));
-  const total = price * selectedList.length;
+  const availableNumbers = selectableNumbers(numbers);
+  const selectedList = validSelectedNumbers(numbers, selectedNumbers);
+  const total = calculateSaleTotalCents(price, selectedList.length);
 
   const handleNumberToggle = (id: string) => {
+    const item = numbers.find((n) => n.id === id);
+    if (!item || !isNumberSelectable(item)) return;
     setSelectedNumbers((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -97,8 +117,8 @@ export default function VendasPage() {
       setError("Supabase não configurado.");
       return;
     }
-    if (selectedList.length === 0) {
-      setError("Selecione pelo menos um número.");
+    if (!canFinalizeSale(numbers, selectedNumbers)) {
+      setError("Selecione pelo menos um número disponível.");
       return;
     }
     setSubmitting(true);
@@ -118,6 +138,7 @@ export default function VendasPage() {
         p_notes: null,
       });
       if (rpcError) throw rpcError;
+      setCompletedBuyerName(buyer.name);
       setSuccess(true);
       setBuyerStep("form");
       setSelectedNumbers(new Set());
@@ -286,7 +307,7 @@ export default function VendasPage() {
               <CheckCircle2 className="size-8" />
             </div>
             <h2 className="text-2xl font-extrabold">Venda realizada!</h2>
-            <p className="mt-2 text-sm text-[var(--muted)]">Os números foram registrados para {buyer.name}.</p>
+            <p className="mt-2 text-sm text-[var(--muted)]">Os números foram registrados para {completedBuyerName}.</p>
             <Button size="lg" className="mt-6 w-full" onClick={() => {
               setSuccess(false);
               setBuyerStep("form");

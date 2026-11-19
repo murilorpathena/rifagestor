@@ -22,7 +22,17 @@ interface SaleRow {
 
 export default function PainelContent() {
   const supabase = getSupabase();
+  const sb = supabase;
   const { userRole, organization, profile, loading: wsLoading } = useWorkspace();
+
+  const [stats, setStats] = useState<any>(null);
+  const [recentSales, setRecentSales] = useState<SaleRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!sb || wsLoading || !profile) return;
+    void loadStats();
+  }, [wsLoading, profile, userRole, organization, sb]);
 
   if (!supabase) {
     return (
@@ -38,17 +48,8 @@ export default function PainelContent() {
     );
   }
 
-  const sb = supabase;
-  const [stats, setStats] = useState<any>(null);
-  const [recentSales, setRecentSales] = useState<SaleRow[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (wsLoading || !profile) return;
-    loadStats();
-  }, [wsLoading, profile, userRole, organization, sb]);
-
   async function loadStats() {
+    if (!sb) return;
     setLoading(true);
 
     if (userRole === 'admin') {
@@ -151,6 +152,29 @@ export default function PainelContent() {
         .order("created_at", { ascending: false })
         .limit(10);
 
+      // O vendedor enxerga a grade da rifa da sua organização (RLS permite a leitura).
+      let available = 0;
+      let reserved = 0;
+      let total = 0;
+      if (organization?.id) {
+        const { data: raffle } = await sb
+          .from("raffles")
+          .select("id")
+          .eq("organization_id", organization.id)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (raffle) {
+          const { data: nums } = await sb
+            .from("raffle_numbers")
+            .select("id, status")
+            .eq("raffle_id", raffle.id);
+          total = (nums ?? []).length;
+          available = (nums ?? []).filter((n: any) => n.status === 'available').length;
+          reserved = (nums ?? []).filter((n: any) => n.status === 'reserved').length;
+        }
+      }
+
       const buyerIds = [...new Set((sales ?? []).map((s: any) => s.buyer_id))];
       let buyersMap: Record<string, string> = {};
       if (buyerIds.length > 0) {
@@ -160,13 +184,15 @@ export default function PainelContent() {
 
       const totalRevenue = (sales ?? []).reduce((acc: number, s: any) =>
         s.payment_status === 'paid' ? acc + s.total_cents : acc, 0);
+      const mySold = (sales ?? []).reduce((acc: number, s: any) => acc + s.quantity, 0);
 
       setStats({
         totalOrgs: 1,
-        totalBuyers: 0,
-        available: 0,
-        sold: (sales ?? []).reduce((acc: number, s: any) => acc + s.quantity, 0),
-        reserved: 0,
+        totalBuyers: buyerIds.length,
+        available,
+        sold: mySold,
+        reserved,
+        totalNumbers: total,
         totalRevenue,
       });
 
@@ -217,7 +243,7 @@ export default function PainelContent() {
           <div className="grid grid-cols-2 gap-3">
             <StatCard label="Organizações" value={stats.totalOrgs} icon={BarChart2} />
             <StatCard label="Compradores" value={stats.totalBuyers} icon={Ticket} />
-            <StatCard label="Números livres" value={stats.available} sub={`de ${stats.sold + stats.available + stats.reserved}`} icon={Check} />
+            <StatCard label="Números livres" value={stats.available} sub={`de ${stats.totalNumbers ?? stats.sold + stats.available + stats.reserved}`} icon={Check} />
             <StatCard label="Receita" value={formatCurrency(stats.totalRevenue)} sub="Vendas pagas" icon={ShoppingCart} />
           </div>
         ) : null}

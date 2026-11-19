@@ -1,53 +1,82 @@
 # RifaGestor
 
-Sistema interno de gerenciamento de rifas (não é rifa online). Hospedagem do frontend na **Vercel** e backend/banco inteiro no **Supabase** (Auth + Postgres + RLS), sem servidor próprio.
+App interno e mobile-first para gerenciar **uma única rifa** (não é SaaS, não é rifa online com cadastro público). Frontend 100% estático; **Supabase é o único backend** (Auth + Postgres + RLS + RPCs + Edge Function).
 
 ## O que o sistema faz
 
-- Cadastro de usuário com criação automática de organização e rifa
-- Login/senha com sessão persistente (Supabase Auth)
-- Painel com números livres/vendidos/reservados e receita
-- PDV de venda mobile-first: comprador (nome, CPF, email, WhatsApp), escolha de números específicos ou automáticos, pagamento (PIX/dinheiro/cartão/outro), status pago/pendente
-- Histórico de vendas
-- Gestão da equipe: convite de vendedores por link, todos com acesso completo à mesma rifa
-- Configurações: valor por número, quantidade de números, data do sorteio, título/prêmio
+- **Acesso somente por login.** Não existe cadastro público. Admin inicial: `rifa@adm.com` / `adm@123` (troque a senha depois).
+- **Papéis:** administrador gerencia tudo; gestor cadastra vendedores e gerencia a rifa; vendedor registra vendas e vê apenas as suas.
+- **Usuários:** criados em `/admin/usuarios` pelo admin/gestor. A senha é gerada no frontend e exibida **uma única vez** para ser entregue ao usuário. O admin também pode redefinir senhas e remover contas; o gestor só cria vendedores da própria organização.
+- **Painel:** números livres/vendidos/reservados, compradores, receita de vendas pagas e últimas vendas.
+- **Grade de números:** reservar/liberar manualmente; ao reduzir o total da rifa, números vendidos/reservados são preservados.
+- **PDV mobile-first:** comprador (nome, CPF, WhatsApp e e-mail opcional), seleção de números, pagamento **registrado manualmente** (`pix | cash | card | other`) e status `paid | pending`. Não há integração com meios de pagamento.
+- **Histórico de vendas:** filtro por papel (vendedor vê só as suas) e ações de marcar como pago/cancelar para quem pode gerenciar.
+- **Configurações da rifa:** título, prêmio, descrição, data do sorteio, status, preço por número, total de números e números por venda. Fica em `/configuracoes`.
 
 ## Stack
 
-- **Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS
-- **Backend/Banco:** Supabase (PostgreSQL, Auth, RLS, RPCs)
-- **Hospedagem:** Vercel (frontend estático, `output: "export"`)
+- **Frontend:** Next.js 16.4.6 (App Router), React 19, TypeScript, Tailwind CSS 4.
+- **Backend:** Supabase (Postgres, Auth, RLS, RPCs `SECURITY DEFINER`, Edge Function `create-user`).
+- **Deploy:** site estático (`output: "export"`, `publish = "out"`). `netlify.toml` pronto para Netlify; também funciona na Vercel. Sem servidor próprio e sem service role key no frontend.
 
-## Estrutura de pastas
+## Estrutura
 
 ```
-supabase/migrations/20251118000000_initial.sql  # Banco completo: tabelas, RLS, RPCs, trigger de cadastro
+supabase/
+  migrations/            # schema, RLS, RPCs e correções (aplicar em ordem)
+  seed.sql               # admin, organização, rifa e 100 números
+  functions/create-user/ # criação/remoção de usuários e troca de senha
 src/
-  app/                    # Rotas Next.js (painel, numeros, vendas, equipe, configuracoes, convites, entrar, cadastro...)
-  components/             # UI mobile-first (bottom nav, header, cards, formulários...)
-  hooks/                  # Supabase client
-  lib/                    # supabase.ts, utils.ts, validation.ts, types.ts
+  app/                   # rotas (painel, numeros, vendas, equipe, configuracoes, admin/usuarios, entrar, perfil...)
+  components/            # app shell, navegação mobile/desktop, formulários, cards
+  hooks/                 # cliente Supabase compartilhado por aba
+  lib/                   # supabase.ts, utils.ts, validation.ts, sale.ts (regras do PDV), types.ts
+tests/                   # vitest: helpers de validação/ formatação e regras puras do PDV
 ```
 
 ## 1. Configurar o Supabase
 
-1. Crie um projeto em [supabase.com](https://supabase.com).
-2. Vá em **SQL Editor** e cole todo o conteúdo de `supabase/migrations/20251118000000_initial.sql`. Execute uma vez.
-3. Vá em **Project Settings > API** e copie:
-   - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
-   - `anon public` → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+Em um projeto novo, aplique as migrations na ordem (o comando abaixo aplica todas as pendentes):
+
+```bash
+supabase link --project-ref SEU_PROJECT_REF
+supabase db push --remote
+```
+
+Ordem dos arquivos relevantes:
+
+```
+20251118000000_initial.sql
+20251118000002_fix_trigger.sql
+20251118000003_roles_and_admin.sql
+20251118000004_update_trigger_and_rls.sql
+20251119000000_seller_rls_and_fix_sale.sql
+20251120000000_single_raffle_admin.sql       # rifa única, helpers e RPCs de grade
+20251120000001_fix_profile_rls_recursion.sql  # corrige 42P17 em profiles
+20251120000002_grants.sql                     # GRANTs para authenticated
+20251120000003_fix_all_rls_recursion.sql      # remove recursão nas demais tabelas
+```
+
+> As duas últimas correções de RLS e a de grants são necessárias: sem elas, o app recebe `42P17` (recursão em policy) ou `403` (falta de `GRANT`).
+
+Depois:
+
+1. Crie o usuário admin em **Authentication → Users → Add user** com `rifa@adm.com` / `adm@123` (e-mail confirmado). O `seed.sql` **pressupõe** que este usuário já existe.
+2. Aplique o seed: `supabase db query --remote --yes --file supabase/seed.sql`. Ele cria o profile admin, a organização `Rifa da Amiga`, a rifa e os 100 números. Se você usar outro e-mail/ID para o admin, ajuste os UUIDs no seed.
+3. Faça o deploy da Edge Function: `supabase functions deploy create-user`. Ela usa `SUPABASE_SERVICE_ROLE_KEY` no ambiente da função — nunca no frontend.
+4. Em **Project Settings → API**, copie `Project URL` e a chave `anon public` para as variáveis de ambiente.
 
 ## 2. Variáveis de ambiente
 
-Copie `.env.example` para `.env.local` (desenvolvimento) e preencha:
+Copie `.env.example` para `.env.local`:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL="https://SEU-PROJETO.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="SUA_CHAVE_ANON"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="SUA_CHAVE_ANON_PUBLIC"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
-No Vercel, cadastre as mesmas variáveis em **Settings > Environment Variables**. Defina `NEXT_PUBLIC_APP_URL` como a URL da sua implantação (ex.: `https://rifa-seu-projeto.vercel.app`).
+Use as mesmas variáveis na plataforma de deploy (em `NEXT_PUBLIC_APP_URL`, coloque a URL pública da aplicação).
 
 ## 3. Rodar localmente
 
@@ -56,29 +85,34 @@ npm install
 npm run dev
 ```
 
-Acesse `http://localhost:3000`.
+Acesse `http://localhost:3000` e entre com o admin.
 
-## 4. Fazer build para a Vercel
+## 4. Testes e build
 
 ```bash
-npm run build
+npm run typecheck   # tsc --noEmit
+npm test            # vitest run
+npm run build       # gera out/
 ```
 
-O Next.js está configurado com `output: "export"` (site estático), ideal para a Vercel. Como todo o backend fica no Supabase, não há funções serverless próprias.
+Os 19 testes cobrem código de produção real: `src/lib/utils.ts`, `src/lib/validation.ts` e `src/lib/sale.ts` (regras do PDV). Eles **não** simulam cobertura de providers React, RPCs SQL ou da Edge Function; esses fluxos foram validados manualmente no navegador.
 
-## 5. Fluxo de uso
+## 5. Deploy
 
-1. **Cadastro:** o dono cria a conta e, no mesmo passo, define nome da rifa, valor por número, quantidade de números e números por venda. O sistema cria a organização, a rifa e todos os números automaticamente.
-2. **Login:** acesso com e-mail e senha.
-3. **PDV (Vendas):** selecione o comprador, escolha os números (ou deixe o sistema escolher automaticamente), informe pagamento e finalize. Os números marcam como vendidos/reservados.
-4. **Equipe:** o dono convida vendedores por link. O convidado cria a conta com o mesmo e-mail e entra na mesma organização, com acesso completo à gestão.
+- **Netlify:** o `netlify.toml` já define `command = "npm run build"`, `publish = "out"` e Node 20. Desative o plugin `@netlify/plugin-nextjs` se ele estiver ativo (entra em conflito com `out`).
+- **Vercel:** framework Next.js, `output: "export"`, diretório de saída `out`. Cadastre as mesmas variáveis de ambiente.
+
+## 6. Fluxo de uso
+
+1. Entre como admin e, se quiser, troque a senha em `/perfil`.
+2. Em `/configuracoes`, ajuste título, prêmio, preço, total de números e demais dados da rifa. Ao aumentar o total, a grade é ampliada automaticamente; ao diminuir, apenas números ainda livres acima do novo total são removidos.
+3. Em `/admin/usuarios`, crie gestores/vendedores e entregue a senha gerada a cada um.
+4. Vendedores usam `/vendas` para registrar vendas e `/vendas/historico` para acompanhar as suas. Gestores/admin podem reservar números em `/numeros` e alterar status de vendas no histórico.
 
 ## Segurança
 
-- Todas as tabelas têm **RLS (Row Level Security)**. Usuários só veem dados da própria organização.
-- Operações de escrita (venda, configurações, convites) são feitas via **RPCs `SECURITY DEFINER`**, que validam a associação do usuário com a organização antes de alterar dados.
+- Todas as tabelas usam **RLS**. Usuários só acessam dados da própria organização; vendedores veem apenas suas vendas.
+- As verificações de permissão usam funções `SECURITY DEFINER` (`is_admin`, `is_org_member`, `is_org_manager`, `is_org_manager_of_raffle`) para evitar recursão nas policies.
+- Escritas sensíveis (venda, grade e gerenciamento de usuários) passam por RPCs/Edge Function que validam papel e vínculo com a organização.
 - CPF é armazenado apenas com dígitos e é único por organização.
-
-## Licença
-
-Uso interno livre.
+- A chave de serviço do Supabase aparece somente na Edge Function; o bundle público usa apenas a chave anon.

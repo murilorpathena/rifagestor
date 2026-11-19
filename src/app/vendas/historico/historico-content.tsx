@@ -1,72 +1,86 @@
 "use client";
 
-import { getSupabase } from "@/lib/supabase";
-import { BottomNav } from "@/components/app/bottom-nav";
+import { useCallback, useEffect, useState } from "react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { MobileHeader } from "@/components/app/mobile-header";
+import { BottomNav } from "@/components/app/bottom-nav";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { useToast } from "@/components/providers/toast-provider";
 import { useWorkspace } from "@/components/providers/workspace-provider";
-import { useEffect, useState } from "react";
+import { useClientSupabase } from "@/hooks/use-client-supabase";
 import { SkeletonNumberGrid } from "@/components/app/skeleton-loading";
 
 export default function HistoricoContent() {
-  const supabase = getSupabase();
-  const { userRole, organization, profile, loading: wsLoading } = useWorkspace();
+  const supabase = useClientSupabase();
+  const { showToast } = useToast();
+  const { userRole, organization, profile, canManage, loading: wsLoading } = useWorkspace();
 
-  if (!supabase) {
-    return (
-      <main className="min-h-screen pb-24 px-4 py-6">
-        <MobileHeader title="Histórico" />
-        <div className="rounded-2xl border border-[var(--line)] bg-amber-50 p-6 card-shadow">
-          <h1 className="text-xl font-bold mb-3">Supabase não configurado</h1>
-          <p className="text-sm text-amber-700">
-            Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY nas variáveis de ambiente.
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  const sb = supabase;
   const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (wsLoading) return;
-    loadSales();
-  }, [wsLoading, userRole, organization, profile, sb]);
-
-  async function loadSales() {
+  const loadSales = useCallback(async () => {
+    if (!supabase || wsLoading) return;
     setLoading(true);
 
-    let query = sb
+    let query = supabase
       .from("sales")
       .select("id, buyer_id, quantity, total_cents, payment_method, payment_status, sold_at, seller_id")
       .order("sold_at", { ascending: false });
 
-    if (userRole === 'vendedor' && profile?.id) {
+    if (userRole === "vendedor" && profile?.id) {
       query = query.eq("seller_id", profile.id);
-    } else if (userRole === 'gestor' && organization?.id) {
+    } else if (organization?.id) {
       query = query.eq("organization_id", organization.id);
     }
-    // Admin não filtra
 
-    const { data } = await query;
-    setSales(data ?? []);
+    const { data, error } = await query;
+    if (error) showToast(error.message, "error");
+    const rows = data ?? [];
 
-    // Buscar compradores
-    const buyerIds = [...new Set((data ?? []).map((s: any) => s.buyer_id))];
+    const buyerIds = [...new Set(rows.map((s: any) => s.buyer_id))];
     let buyers: Record<string, string> = {};
     if (buyerIds.length > 0) {
-      const { data: b } = await sb.from("buyers").select("id, name").in("id", buyerIds);
+      const { data: b } = await supabase.from("buyers").select("id, name").in("id", buyerIds);
       buyers = Object.fromEntries((b ?? []).map((x: any) => [x.id, x.name]));
     }
 
-    setSales((data ?? []).map((sale: any) => ({
-      ...sale,
-      buyer_name: buyers[sale.buyer_id] || "Comprador",
-    })));
+    let sellers: Record<string, string> = {};
+    if (canManage && userRole !== "vendedor") {
+      const sellerIds = [...new Set(rows.map((s: any) => s.seller_id))];
+      if (sellerIds.length > 0) {
+        const { data: p } = await supabase.from("profiles").select("id, name").in("id", sellerIds);
+        sellers = Object.fromEntries((p ?? []).map((x: any) => [x.id, x.name]));
+      }
+    }
 
+    setSales(
+      rows.map((sale: any) => ({
+        ...sale,
+        buyer_name: buyers[sale.buyer_id] || "Comprador",
+        seller_name: sellers[sale.seller_id] || null,
+      })),
+    );
     setLoading(false);
+  }, [supabase, wsLoading, userRole, organization?.id, profile?.id, canManage, showToast]);
+
+  useEffect(() => {
+    void loadSales();
+  }, [loadSales]);
+
+  async function updateStatus(saleId: string, status: "paid" | "cancelled") {
+    if (!supabase) return;
+    setBusyId(saleId);
+    const { error } = await supabase.rpc("set_sale_status", {
+      p_sale_id: saleId,
+      p_status: status,
+    });
+    if (error) showToast(error.message, "error");
+    else {
+      showToast(status === "paid" ? "Venda marcada como paga." : "Venda cancelada.", "success");
+      await loadSales();
+    }
+    setBusyId(null);
   }
 
   const methodLabel = (m: string) => {
@@ -80,17 +94,17 @@ export default function HistoricoContent() {
 
   return (
     <main className="min-h-screen pb-24">
-      <MobileHeader title="Histórico" />
-      <div className="px-4 py-6 space-y-4 pb-6">
-        <h1 className="text-xl font-extrabold tracking-tight">
-          {userRole === 'vendedor' ? "Minhas Vendas" : "Histórico de vendas"}
-        </h1>
+      <MobileHeader title="Vendas" userMenu />
+      <div className="px-4 py-6 space-y-4">
+        <div>
+          <h1 className="text-xl font-extrabold tracking-tight">
+            {userRole === "vendedor" ? "Minhas Vendas" : "Histórico de vendas"}
+          </h1>
+          <p className="text-sm text-[var(--muted)]">{sales.length} venda(s) registrada(s)</p>
+        </div>
+
         {loading ? (
-          <div className="flex min-h-[40vh] flex-col items-center justify-center px-6 py-12">
-            <div className="flex min-h-[40vh] flex-col items-center justify-center px-6 py-12">
-              <SkeletonNumberGrid />
-            </div>
-          </div>
+          <SkeletonNumberGrid />
         ) : sales.length === 0 ? (
           <div className="flex min-h-[40vh] flex-col items-center justify-center px-6 py-12 text-center">
             <p className="text-[var(--muted)]">Nenhuma venda registrada ainda.</p>
@@ -99,18 +113,41 @@ export default function HistoricoContent() {
           <div className="space-y-2">
             {sales.map((sale) => (
               <div key={sale.id} className="rounded-xl border border-[var(--line)] bg-white p-3 card-shadow">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium">{sale.buyer_name}</p>
-                  <span className={`text-xs font-medium ${sale.payment_status === "paid" ? "text-[var(--ink)]" : "text-[var(--muted)]"}`}>
-                    {sale.payment_status === "paid" ? "Pago" : "Pendente"}
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-semibold">{sale.buyer_name}</p>
+                  <span className={`shrink-0 text-xs font-medium ${sale.payment_status === "paid" ? "text-[var(--ink)]" : "text-[var(--muted)]"}`}>
+                    {sale.payment_status === "paid" ? "Pago" : sale.payment_status === "cancelled" ? "Cancelado" : "Pendente"}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-xs text-[var(--muted)]">
+                <div className="mt-1 flex items-center justify-between text-xs text-[var(--muted)]">
                   <span>{sale.quantity} número(s) • {methodLabel(sale.payment_method)}</span>
                   <span>{formatDateTime(sale.sold_at)}</span>
                 </div>
-                <div className="mt-1 flex items-end gap-1">
-                  <span className="text-sm font-bold text-[var(--ink)]">{formatCurrency(sale.total_cents)}</span>
+                {sale.seller_name ? (
+                  <p className="mt-1 text-xs text-[var(--muted)]">Vendedor: {sale.seller_name}</p>
+                ) : null}
+                <div className="mt-2 flex items-end justify-between gap-2">
+                  <span className="text-sm font-bold">{formatCurrency(sale.total_cents)}</span>
+                  {canManage && sale.payment_status !== "paid" && sale.payment_status !== "cancelled" ? (
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        disabled={busyId === sale.id}
+                        onClick={() => void updateStatus(sale.id, "paid")}
+                        className="focus-ring inline-flex items-center gap-1 rounded-lg border border-[var(--line)] px-2 py-1 text-[11px] font-medium hover:bg-[#f7f7f7]"
+                      >
+                        <CheckCircle2 className="size-3.5" /> Pago
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyId === sale.id}
+                        onClick={() => void updateStatus(sale.id, "cancelled")}
+                        className="focus-ring inline-flex items-center gap-1 rounded-lg border border-[var(--line)] px-2 py-1 text-[11px] font-medium text-[var(--danger)] hover:bg-red-50"
+                      >
+                        <XCircle className="size-3.5" /> Cancelar
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ))}

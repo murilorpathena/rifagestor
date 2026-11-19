@@ -1,121 +1,165 @@
 "use client";
 
-import { getSupabase } from "@/lib/supabase";
-import { BottomNav } from "@/components/app/bottom-nav";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowRight, CircleDot } from "lucide-react";
 import { MobileHeader } from "@/components/app/mobile-header";
+import { BottomNav } from "@/components/app/bottom-nav";
 import { NumberGrid } from "@/components/app/number-grid";
+import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
+import { useToast } from "@/components/providers/toast-provider";
 import { useWorkspace } from "@/components/providers/workspace-provider";
-import { useEffect, useState } from "react";
+import { useClientSupabase } from "@/hooks/use-client-supabase";
 import { SkeletonNumberGrid } from "@/components/app/skeleton-loading";
+import type { RaffleNumber } from "@/lib/types";
 
 export default function NumerosContent() {
-  const supabase = getSupabase();
-  const { userRole, organization, profile, loading: wsLoading } = useWorkspace();
+  const supabase = useClientSupabase();
+  const router = useRouter();
+  const { showToast } = useToast();
+  const { raffle, canManage, loading: wsLoading } = useWorkspace();
 
-  if (!supabase) {
-    return (
-      <main className="min-h-screen pb-24 px-4 py-6">
-        <MobileHeader title="Números" />
-        <div className="rounded-2xl border border-[var(--line)] bg-amber-50 p-6 card-shadow">
-          <h1 className="text-xl font-bold mb-3">Supabase não configurado</h1>
-          <p className="text-sm text-amber-700">
-            Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY nas variáveis de ambiente.
-          </p>
-        </div>
-      </main>
-    );
-  }
-
-  const sb = supabase;
-  const [raffle, setRaffle] = useState<any>(null);
-  const [numbers, setNumbers] = useState<any[]>([]);
+  const [numbers, setNumbers] = useState<RaffleNumber[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!supabase || !raffle) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("raffle_numbers")
+      .select("id, raffle_id, number, status, sale_id, buyer_id, created_at, updated_at")
+      .eq("raffle_id", raffle.id)
+      .order("number", { ascending: true });
+    if (error) showToast(error.message, "error");
+    else setNumbers((data ?? []) as RaffleNumber[]);
+    setLoading(false);
+  }, [supabase, raffle, showToast]);
 
   useEffect(() => {
     if (wsLoading) return;
-    loadNumbers();
-  }, [wsLoading, userRole, organization, profile, sb]);
+    void load();
+  }, [wsLoading, load]);
 
-  async function loadNumbers() {
-    setLoading(true);
-
-    if (userRole === 'admin') {
-      const { data: orgs } = await sb.from("organizations").select("id").limit(1);
-      if (orgs?.[0]) {
-        const { data: r } = await sb
-          .from("raffles")
-          .select("*")
-          .eq("organization_id", orgs[0].id)
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-        setRaffle(r);
-        if (r) {
-          const { data: n } = await sb
-            .from("raffle_numbers")
-            .select("id, number, status, sale_id, buyer_id")
-            .eq("raffle_id", r.id)
-            .order("number", { ascending: true });
-          setNumbers(n ?? []);
-        }
-      }
-    } else if (organization?.id) {
-      const { data: r } = await sb
-        .from("raffles")
-        .select("*")
-        .eq("organization_id", organization.id)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      setRaffle(r);
-      if (r) {
-        const { data: n } = await sb
-          .from("raffle_numbers")
-          .select("id, number, status, sale_id, buyer_id")
-          .eq("raffle_id", r.id)
-          .order("number", { ascending: true });
-        setNumbers(n ?? []);
-      }
-    }
-
-    setLoading(false);
+  function toggle(id: string) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
+
+  async function handleManage(number: RaffleNumber) {
+    if (!supabase || busy) return;
+    const nextStatus = number.status === "reserved" ? "available" : "reserved";
+    setBusy(true);
+    const { error } = await supabase.rpc("set_number_status", {
+      p_number_id: number.id,
+      p_status: nextStatus,
+    });
+    if (error) showToast(error.message, "error");
+    else await load();
+    setBusy(false);
+  }
+
+  function sellSelected(items: RaffleNumber[]) {
+    if (items.length === 0) return;
+    // O PDV lê a seleção da sessão para manter o fluxo simples.
+    sessionStorage.setItem("rifa:selected-numbers", JSON.stringify(items.map((n) => n.id)));
+    router.push("/vendas");
+  }
+
+  const available = numbers.filter((n) => n.status === "available").length;
+  const reserved = numbers.filter((n) => n.status === "reserved").length;
+  const sold = numbers.filter((n) => n.status === "sold").length;
 
   return (
     <main className="min-h-screen pb-24">
-      <MobileHeader title="Números" />
-      <div className="px-4 py-6 space-y-5 pb-6">
-        {loading ? (
-          <div className="flex min-h-[40vh] flex-col items-center justify-center px-6 py-12">
-            <div className="flex min-h-[40vh] flex-col items-center justify-center px-6 py-12">
-              <SkeletonNumberGrid />
-            </div>
-          </div>
-        ) : raffle ? (
-          <>
-            <div className="grid grid-cols-2 gap-3 mb-1">
-              <div className="rounded-xl border border-[var(--line)] bg-white p-3">
-                <p className="text-xs text-[var(--muted)]">Total</p>
-                <p className="text-lg font-bold">{raffle.total_numbers}</p>
-              </div>
-              <div className="rounded-xl border border-[var(--line)] bg-white p-3">
-                <p className="text-xs text-[var(--muted)]">Valor por número</p>
-                <p className="text-lg font-bold text-[var(--ink)]">{formatCurrency(raffle.ticket_price_cents)}</p>
-              </div>
-            </div>
-            <NumberGrid
-              raffle={raffle}
-              numbers={numbers}
-              selectedNumbers={new Set()}
-              onToggle={() => {}}
-              onSellSelected={() => {}}
-            />
-          </>
+      <MobileHeader title="Números" userMenu />
+      <div className="px-4 py-6 space-y-5">
+        {wsLoading ? (
+          <SkeletonNumberGrid />
+        ) : !raffle ? (
+          <p className="py-10 text-center text-sm text-[var(--muted)]">Nenhuma rifa configurada.</p>
         ) : (
-          <div className="flex min-h-[40vh] flex-col items-center justify-center px-6 py-12 text-center">
-            <p className="text-[var(--muted)]">Nenhuma rifa encontrada.</p>
-          </div>
+          <>
+            <div>
+              <h1 className="text-xl font-extrabold tracking-tight">{raffle.title}</h1>
+              <p className="text-sm text-[var(--muted)]">
+                {formatCurrency(raffle.ticket_price_cents)} por número
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-xl border border-[var(--line)] bg-white p-3 text-center">
+                <p className="text-lg font-bold">{available}</p>
+                <p className="text-[10px] uppercase text-[var(--muted)]">Livres</p>
+              </div>
+              <div className="rounded-xl border border-[var(--line)] bg-white p-3 text-center">
+                <p className="text-lg font-bold">{reserved}</p>
+                <p className="text-[10px] uppercase text-[var(--muted)]">Reservados</p>
+              </div>
+              <div className="rounded-xl border border-[var(--line)] bg-white p-3 text-center">
+                <p className="text-lg font-bold">{sold}</p>
+                <p className="text-[10px] uppercase text-[var(--muted)]">Vendidos</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 text-[11px] text-[var(--muted)]">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block size-3 rounded border border-[var(--line)] bg-white" /> Livre
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block size-3 rounded border border-[var(--line)] bg-[#f0f0f0]" /> Reservado
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block size-3 rounded bg-[var(--ink)]" /> Vendido
+              </span>
+            </div>
+
+            {loading ? (
+              <SkeletonNumberGrid />
+            ) : numbers.length === 0 ? (
+              <p className="py-10 text-center text-sm text-[var(--muted)]">Nenhum número gerado.</p>
+            ) : (
+              <NumberGrid
+                raffle={raffle}
+                numbers={numbers}
+                selectedNumbers={selected}
+                onToggle={toggle}
+                onSellSelected={sellSelected}
+                onManage={canManage ? handleManage : undefined}
+              />
+            )}
+
+            {!canManage && selected.size > 0 ? (
+              <Button size="lg" className="w-full" onClick={() => sellSelected(numbers.filter((n) => selected.has(n.id)))}>
+                Vender {selected.size} número(s) <ArrowRight className="ml-2 size-4" />
+              </Button>
+            ) : null}
+
+            {!canManage ? (
+              <p className="flex items-center gap-2 text-xs text-[var(--muted)]">
+                <CircleDot className="size-3.5" /> Selecione números livres para registrar uma venda.
+              </p>
+            ) : null}
+
+            {canManage ? (
+              <Link
+                href="/configuracoes"
+                className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-medium hover:bg-[#f7f7f7]"
+              >
+                Alterar total de números <ArrowRight className="size-3.5" />
+              </Link>
+            ) : null}
+          </>
         )}
       </div>
       <BottomNav />

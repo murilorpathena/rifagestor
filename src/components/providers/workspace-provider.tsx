@@ -11,6 +11,8 @@ interface WorkspaceContextValue {
   membership: Membership | null;
   profile: Profile | null;
   userRole: UserRole | null;
+  /** admin ou gestor (dono) da organização atual. */
+  canManage: boolean;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -49,7 +51,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Carrega o profile para saber o role do usuário
     const { data: prof, error: profileError } = await supabase
       .from("profiles")
       .select("id, name, email, role, created_at")
@@ -57,47 +58,52 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       .maybeSingle();
 
     if (profileError || !prof) {
-      setError(profileError?.message ?? "Não foi possível carregar seu perfil.");
+      setError(profileError?.message ?? "Não foi possível carregar seu perfil. Procure o administrador.");
       setLoading(false);
       return;
     }
 
-    setProfile(prof as Profile);
-    setUserRole((prof as Profile).role as UserRole);
+    const currentProfile = prof as Profile;
+    setProfile(currentProfile);
+    setUserRole(currentProfile.role as UserRole);
 
-    // Se for admin, não precisa de organização
-    if ((prof as Profile).role === 'admin') {
-      setOrganization(null);
-      setRaffle(null);
-      setMembership(null);
-      setLoading(false);
-      return;
-    }
-
-    // Para gestor/vendedor, carrega organização
-    const { data: member, error: memberError } = await supabase
+    const { data: member } = await supabase
       .from("organization_members")
       .select("*")
       .eq("user_id", user.id)
+      .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
 
-    if (memberError || !member) {
-      setError("Nenhuma organização encontrada para esta conta.");
+    setMembership((member as Membership | null) ?? null);
+
+    // App de rifa única: o admin também enxerga a organização/rifa configurada.
+    let orgId: string | null = member?.organization_id ?? null;
+    if (!orgId) {
+      const { data: firstOrg } = await supabase
+        .from("organizations")
+        .select("id")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      orgId = firstOrg?.id ?? null;
+    }
+
+    if (!orgId) {
       setOrganization(null);
       setRaffle(null);
-      setMembership(null);
+      setError("Nenhuma rifa configurada. Peça ao administrador para criar uma.");
       setLoading(false);
       return;
     }
 
     const [{ data: org, error: orgError }, { data: currentRaffle, error: raffleError }] =
       await Promise.all([
-        supabase.from("organizations").select("*").eq("id", member.organization_id).single(),
+        supabase.from("organizations").select("*").eq("id", orgId).maybeSingle(),
         supabase
           .from("raffles")
           .select("*")
-          .eq("organization_id", member.organization_id)
+          .eq("organization_id", orgId)
           .order("created_at", { ascending: true })
           .limit(1)
           .maybeSingle(),
@@ -107,9 +113,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       setError(orgError?.message ?? raffleError?.message ?? "Não foi possível carregar a rifa.");
     }
 
-    setOrganization(org);
-    setRaffle(currentRaffle);
-    setMembership(member as Membership);
+    setOrganization((org as Organization | null) ?? null);
+    setRaffle((currentRaffle as Raffle | null) ?? null);
     setLoading(false);
   }, [user]);
 
@@ -117,9 +122,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     void refresh();
   }, [refresh]);
 
+  const canManage =
+    userRole === "admin" || membership?.role === "owner" || membership?.role === "gestor";
+
   const value = useMemo(
-    () => ({ organization, raffle, membership, profile, userRole, loading, error, refresh }),
-    [organization, raffle, membership, profile, userRole, loading, error, refresh],
+    () => ({
+      organization,
+      raffle,
+      membership,
+      profile,
+      userRole,
+      canManage,
+      loading,
+      error,
+      refresh,
+    }),
+    [organization, raffle, membership, profile, userRole, canManage, loading, error, refresh],
   );
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;

@@ -14,6 +14,8 @@ interface NumberGridProps {
   onToggle: (id: string) => void;
   onSellSelected: (numbers: RaffleNumber[]) => void;
   loading?: boolean;
+  /** Quando informado, a grade entra em modo gestão: clicar reserva/libera. */
+  onManage?: (number: RaffleNumber) => void;
 }
 
 export function NumberGrid({
@@ -23,6 +25,7 @@ export function NumberGrid({
   onToggle,
   onSellSelected,
   loading,
+  onManage,
 }: NumberGridProps) {
   const sorted = useMemo(
     () => [...numbers].sort((a, b) => a.number - b.number),
@@ -46,17 +49,25 @@ export function NumberGrid({
 
   return (
     <section className="space-y-5">
-      <div className="flex items-center justify-between px-1">
-        <h2 className="text-lg font-bold tracking-tight">Números disponíveis</h2>
-        <Button size="sm" onClick={() => onSellSelected(selectedList)} disabled={!canSell || loading} className="hidden sm:inline">
-          Vender selecionados <ArrowRight className="ml-2 size-3.5" />
-        </Button>
-        {canSell ? (
-          <Button variant="ghost" size="sm" onClick={() => onSellSelected(selectedList)} className="flex flex-col items-center gap-1 px-2">
-            <Check className="size-4" />
-            <span className="text-[10px] font-bold">{selectedList.length}</span>
-          </Button>
-        ) : null}
+      <div className="flex items-center justify-between gap-2 px-1">
+        <h2 className="text-lg font-bold tracking-tight">
+          {onManage ? "Grade da rifa" : "Números disponíveis"}
+        </h2>
+        {onManage ? (
+          <span className="text-[10px] text-[var(--muted)]">Toque para reservar/liberar</span>
+        ) : (
+          <>
+            <Button size="sm" onClick={() => onSellSelected(selectedList)} disabled={!canSell || loading} className="hidden sm:inline">
+              Vender selecionados <ArrowRight className="ml-2 size-3.5" />
+            </Button>
+            {canSell ? (
+              <Button variant="ghost" size="sm" onClick={() => onSellSelected(selectedList)} className="flex flex-col items-center gap-1 px-2">
+                <Check className="size-4" />
+                <span className="text-[10px] font-bold">{selectedList.length}</span>
+              </Button>
+            ) : null}
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-4 gap-1.5 px-1 max-w-[460px] mx-auto">
@@ -68,10 +79,15 @@ export function NumberGrid({
               key={number.id}
               type="button"
               onClick={() => {
+                if (onManage) {
+                  if (number.status === "sold") return;
+                  onManage(number);
+                  return;
+                }
                 if (number.status !== "available") return;
                 onToggle(number.id);
               }}
-              disabled={number.status !== "available"}
+              disabled={number.status === "sold" || (!onManage && number.status !== "available")}
               aria-pressed={selected}
               className={cn(
                 "aspect-square rounded-lg border flex items-center justify-center text-xs font-medium transition disabled:opacity-30",
@@ -85,7 +101,7 @@ export function NumberGrid({
         })}
       </div>
 
-      {selectedList.length > 0 && (
+      {!onManage && selectedList.length > 0 && (
         <div className="px-2">
           <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-[var(--line)] bg-[#f7f7f7]">
             <span className="text-sm font-semibold">{selectedList.length} número(s) selecionado(s)</span>

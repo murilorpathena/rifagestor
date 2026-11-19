@@ -1,193 +1,295 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { ArrowRight, Plus, User, ShieldCheck, Mail, CreditCard, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { KeyRound, Plus, RefreshCw, Trash2, UserCog } from "lucide-react";
+import { MobileHeader } from "@/components/app/mobile-header";
+import { BottomNav } from "@/components/app/bottom-nav";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/input";
 import { useToast } from "@/components/providers/toast-provider";
 import { useClientSupabase } from "@/hooks/use-client-supabase";
+import { useWorkspace } from "@/components/providers/workspace-provider";
+
+interface UserRow {
+  id: string;
+  name: string;
+  email: string;
+  role: "admin" | "gestor" | "vendedor";
+  created_at: string;
+}
+
+const roleLabel: Record<string, string> = {
+  admin: "Administrador",
+  gestor: "Gestor",
+  vendedor: "Vendedor",
+};
+
+function makePassword() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#";
+  let value = "";
+  for (let i = 0; i < 12; i += 1) value += chars[Math.floor(Math.random() * chars.length)];
+  return value;
+}
 
 export default function AdminUsuariosPage() {
   const supabase = useClientSupabase();
   const { showToast } = useToast();
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { organization, profile: me } = useWorkspace();
+
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
   const [form, setForm] = useState({
-    email: "",
-    password: "adm@123",
     full_name: "",
-    role: "vendedor" as "admin" | "gestor" | "vendedor",
-    organization_id: "",
+    email: "",
+    password: makePassword(),
+    role: "vendedor" as "gestor" | "vendedor",
   });
-  const [orgs, setOrgs] = useState<any[]>([]);
+
+  const loadUsers = useCallback(async () => {
+    if (!supabase) return;
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, name, email, role, created_at")
+      .order("created_at", { ascending: false });
+    if (error) showToast(error.message, "error");
+    else setUsers((data ?? []) as UserRow[]);
+    setLoading(false);
+  }, [supabase, showToast]);
 
   useEffect(() => {
-    if (!supabase) return;
-    loadUsers();
-    loadOrgs();
-  }, [supabase]);
+    void loadUsers();
+  }, [loadUsers]);
 
-  async function loadUsers() {
-    try {
-      // Buscar profiles (incluindo admin)
-      const { data } = await supabase.from("profiles").select("id, name, email, role, created_at").order("created_at", { ascending: false });
-      setUsers(data ?? []);
-    } catch (err: any) {
-      showToast(err.message ?? "Erro ao carregar usuários.", "error");
-    }
-  }
-
-  async function loadOrgs() {
-    try {
-      const { data } = await supabase.from("organizations").select("id, name").order("name", { ascending: true });
-      setOrgs(data ?? []);
-    } catch (err: any) {
-      // Ignorar erro de orgs
-    }
-  }
-
-  async function handleCreateUser(event: React.FormEvent) {
+  async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
-    if (!supabase) {
-      showToast("Supabase não configurado.", "error");
-      return;
-    }
+    if (!supabase) return;
     setCreating(true);
+    setGeneratedPassword(null);
 
-    try {
-      const { data, error } = await supabase.functions.invoke("create-user", {
-        body: {
-          email: form.email,
-          password: form.password,
-          full_name: form.full_name,
-          role: form.role,
-          organization_id: form.organization_id || undefined,
-        },
-      });
+    const { data, error } = await supabase.functions.invoke("create-user", {
+      body: {
+        email: form.email.trim(),
+        password: form.password,
+        full_name: form.full_name.trim(),
+        role: form.role,
+        organization_id: organization?.id,
+      },
+    });
 
-      if (error) {
-        showToast(error.message ?? error ?? "Erro ao criar usuário.", "error");
-        setCreating(false);
-        return;
-      }
-
-      showToast("Usuário criado com sucesso!", "success");
-      setForm({ email: "", password: "adm@123", full_name: "", role: "vendedor", organization_id: "" });
+    if (error || data?.error) {
+      showToast(data?.error ?? error?.message ?? "Erro ao criar usuário.", "error");
+    } else {
+      setGeneratedPassword(form.password);
+      showToast("Usuário criado. Guarde a senha gerada!", "success");
+      setForm({ full_name: "", email: "", password: makePassword(), role: "vendedor" });
       await loadUsers();
-    } catch (err: any) {
-      showToast(err.message ?? "Erro ao criar usuário.", "error");
-    } finally {
-      setCreating(false);
     }
+    setCreating(false);
   }
 
-  const roleLabel = (r: string) => {
-    switch (r) {
-      case "admin": return "Administrador";
-      case "gestor": return "Gestor";
-      case "vendedor": return "Vendedor";
-      default: return r;
+  async function handleRole(user: UserRow, role: "admin" | "gestor" | "vendedor") {
+    if (!supabase || user.role === role) return;
+    setBusyId(user.id);
+    const { error } = await supabase.from("profiles").update({ role }).eq("id", user.id);
+    if (error) {
+      showToast(error.message, "error");
+    } else {
+      const memberRole = role === "vendedor" ? "member" : "owner";
+      await supabase
+        .from("organization_members")
+        .update({ role: memberRole })
+        .eq("user_id", user.id)
+        .eq("organization_id", organization?.id ?? "");
+      showToast("Permissão atualizada.", "success");
+      await loadUsers();
     }
-  };
+    setBusyId(null);
+  }
 
-  const roleColor = (r: string) => {
-    switch (r) {
-      case "admin": return "text-[var(--ink)] bg-[#f7f7f7] border border-[var(--line)]";
-      case "gestor": return "text-[var(--ink)] bg-[#f7f7f7] border border-[var(--line)]";
-      case "vendedor": return "text-[var(--ink)] bg-[#f7f7f7] border border-[var(--line)]";
-      default: return "text-[var(--muted)]";
+  async function handleRemove(user: UserRow) {
+    if (!supabase || user.id === me?.id) return;
+    if (!window.confirm(`Remover o acesso de ${user.name || user.email}?`)) return;
+    setBusyId(user.id);
+    const { error } = await supabase.functions.invoke("create-user", {
+      body: { action: "delete", user_id: user.id },
+    });
+    if (error) showToast(error.message, "error");
+    else {
+      showToast("Usuário removido.", "success");
+      await loadUsers();
     }
-  };
+    setBusyId(null);
+  }
+
+  async function handleResetPassword(user: UserRow) {
+    if (!supabase) return;
+    const password = makePassword();
+    const { error } = await supabase.functions.invoke("create-user", {
+      body: { action: "update_password", user_id: user.id, password },
+    });
+    if (error) showToast(error.message, "error");
+    else {
+      setGeneratedPassword(password);
+      showToast("Nova senha gerada. Guarde para entregar ao usuário.", "success");
+    }
+  }
 
   return (
     <main className="min-h-screen pb-24">
-      <div className="px-4 py-6 space-y-5 pb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-extrabold tracking-tight">Gerenciar Usuários</h1>
-            <p className="text-sm text-[var(--muted)]">Apenas administradores podem criar novas contas.</p>
-          </div>
-          <Link
-            href="/painel"
-            className="focus-ring inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[#f7f7f7]"
-          >
-            <ArrowRight className="size-3.5" /> Voltar ao painel
-          </Link>
+      <MobileHeader title="Usuários" userMenu />
+      <div className="px-4 py-6 space-y-5">
+        <div>
+          <h1 className="text-xl font-extrabold tracking-tight">Usuários e permissões</h1>
+          <p className="text-sm text-[var(--muted)]">
+            Crie gestores e vendedores para a rifa {organization?.name ?? ""}.
+          </p>
         </div>
 
-        <section className="rounded-2xl border border-[var(--line)] bg-white p-5 card-shadow">
-          <h2 className="text-lg font-bold mb-4">Criar novo usuário</h2>
-          <form onSubmit={handleCreateUser} className="grid gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            <Field label="E-mail" htmlFor="create-email">
-              <Input id="create-email" type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder="nome@exemplo.com" required />
+        {generatedPassword ? (
+          <div className="rounded-xl border border-[var(--line)] bg-[#f7f7f7] p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-[var(--muted)]">Senha do último usuário</p>
+            <p className="mt-1 select-all break-all font-mono text-sm font-bold">{generatedPassword}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">Entregue ao usuário e depois feche esta tela.</p>
+          </div>
+        ) : null}
+
+        <section className="rounded-2xl border border-[var(--line)] bg-white p-4 card-shadow">
+          <h2 className="mb-4 flex items-center gap-2 text-base font-bold">
+            <Plus className="size-4" /> Novo usuário
+          </h2>
+          <form onSubmit={handleCreate} className="grid gap-3 sm:grid-cols-2">
+            <Field label="Nome" htmlFor="new-name">
+              <Input
+                id="new-name"
+                value={form.full_name}
+                onChange={(e) => setForm((p) => ({ ...p, full_name: e.target.value }))}
+                placeholder="Nome do vendedor"
+                required
+              />
             </Field>
-            <Field label="Senha" htmlFor="create-password">
-              <Input id="create-password" type="password" value={form.password} onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))} placeholder="Mínimo 6 caracteres" required />
+            <Field label="E-mail" htmlFor="new-email">
+              <Input
+                id="new-email"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                placeholder="nome@exemplo.com"
+                required
+              />
             </Field>
-            <Field label="Nome completo" htmlFor="create-name">
-              <Input id="create-name" value={form.full_name} onChange={(e) => setForm((p) => ({ ...p, full_name: e.target.value }))} placeholder="João da Silva" required />
-            </Field>
-            <Field label="Função" htmlFor="create-role">
-              <Select id="create-role" value={form.role} onChange={(e) => setForm((p) => ({ ...p, role: e.target.value as any }))} required>
+            <Field label="Função" htmlFor="new-role">
+              <Select
+                id="new-role"
+                value={form.role}
+                onChange={(e) => setForm((p) => ({ ...p, role: e.target.value as "gestor" | "vendedor" }))}
+              >
                 <option value="vendedor">Vendedor</option>
                 <option value="gestor">Gestor</option>
-                <option value="admin">Administrador</option>
               </Select>
             </Field>
-            {form.role !== 'admin' && (
-              <Field label="Organização" htmlFor="create-org">
-                <Select id="create-org" value={form.organization_id} onChange={(e) => setForm((p) => ({ ...p, organization_id: e.target.value }))}>
-                  <option value="">Escolher organização</option>
-                  {orgs.map((org) => (
-                    <option key={org.id} value={org.id}>{org.name}</option>
-                  ))}
-                </Select>
-              </Field>
-            )}
-            <Button type="submit" size="lg" className="col-span-1 sm:col-span-auto" loading={creating}>
-              <Plus className="mr-2 size-4" /> Criar usuário
-            </Button>
+            <Field label="Senha (gerada)" htmlFor="new-password">
+              <Input
+                id="new-password"
+                value={form.password}
+                onChange={(e) => setForm((p) => ({ ...p, password: e.target.value }))}
+                minLength={8}
+                required
+              />
+            </Field>
+            <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+              <Button type="submit" loading={creating}>
+                <UserCog className="mr-2 size-4" /> Criar usuário
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setForm((p) => ({ ...p, password: makePassword() }))}
+              >
+                <KeyRound className="mr-2 size-4" /> Gerar outra senha
+              </Button>
+            </div>
           </form>
         </section>
 
-        <section className="rounded-2xl border border-[var(--line)] bg-white p-5 card-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold">Usuários cadastrados</h2>
+        <section className="rounded-2xl border border-[var(--line)] bg-white p-4 card-shadow">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-bold">Usuários cadastrados ({users.length})</h2>
             <button
               type="button"
-              onClick={loadUsers}
-              className="focus-ring inline-flex items-center gap-1 rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-xs font-medium text-[var(--muted)] hover:bg-[#f7f7f7]"
+              onClick={() => void loadUsers()}
+              className="focus-ring inline-flex items-center gap-1 rounded-lg border border-[var(--line)] px-3 py-2 text-xs text-[var(--muted)] hover:bg-[#f7f7f7]"
             >
               <RefreshCw className="size-3.5" /> Atualizar
             </button>
           </div>
 
-          {users.length === 0 ? (
-            <p className="text-sm text-[var(--muted)] text-center py-6">Nenhum usuário encontrado.</p>
+          {loading ? (
+            <p className="py-6 text-center text-sm text-[var(--muted)]">Carregando...</p>
+          ) : users.length === 0 ? (
+            <p className="py-6 text-center text-sm text-[var(--muted)]">Nenhum usuário encontrado.</p>
           ) : (
             <div className="space-y-2">
-              {users.map((u) => (
-                <div key={u.id} className="flex items-center justify-between px-3 py-2.5 rounded-xl border border-[var(--line)] bg-[#f7f7f7]">
-                  <div className="flex items-center gap-3">
-                    <div className="grid size-8 place-items-center rounded-lg bg-[#e5e5e5] text-[var(--ink)] font-bold text-xs">
-                      {u.name?.[0] || "U"}
+              {users.map((user) => (
+                <div key={user.id} className="rounded-xl border border-[var(--line)] bg-[#f7f7f7] p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">{user.name || "Usuário"}</p>
+                      <p className="truncate text-xs text-[var(--muted)]">{user.email}</p>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">{u.name || "Usuário"}</p>
-                      <p className="text-xs text-[var(--muted)]">{u.email}</p>
-                    </div>
+                    <span className="shrink-0 rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[10px] font-bold uppercase">
+                      {roleLabel[user.role] ?? user.role}
+                    </span>
                   </div>
-                  <span className={`text-xs font-bold tracking-tighter uppercase px-2 py-0.5 rounded-full ${roleColor(u.role)}`}>
-                    {roleLabel(u.role)}
-                  </span>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {user.id !== me?.id ? (
+                      <Select
+                        aria-label={`Permissão de ${user.name}`}
+                        value={user.role}
+                        disabled={busyId === user.id}
+                        onChange={(e) => void handleRole(user, e.target.value as "admin" | "gestor" | "vendedor")}
+                        className="h-9 w-auto min-w-32 text-xs"
+                      >
+                        <option value="vendedor">Vendedor</option>
+                        <option value="gestor">Gestor</option>
+                        <option value="admin">Administrador</option>
+                      </Select>
+                    ) : (
+                      <span className="text-xs text-[var(--muted)]">Sua conta</span>
+                    )}
+                    {user.id !== me?.id ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void handleResetPassword(user)}
+                        >
+                          <KeyRound className="mr-1.5 size-3.5" /> Nova senha
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-[var(--danger)]"
+                          disabled={busyId === user.id}
+                          onClick={() => void handleRemove(user)}
+                        >
+                          <Trash2 className="mr-1.5 size-3.5" /> Remover
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </section>
       </div>
+      <BottomNav />
     </main>
   );
 }

@@ -1,15 +1,11 @@
 "use client";
 
-import { createBrowserClient } from "@supabase/ssr";
+import { getSupabase } from "@/lib/supabase";
 
-let client: ReturnType<typeof createBrowserClient> | null = null;
-
+/**
+ * Mantém um único cliente Supabase por aba.
+ * Os providers, as páginas e as RPCs compartilham a mesma sessão.
+ */
 export function useClientSupabase() {
-  if (!client) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!url || !anonKey) return null;
-    client = createBrowserClient(url, anonKey);
-  }
-  return client;
+  return getSupabase();
 }
