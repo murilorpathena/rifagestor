@@ -5,7 +5,7 @@ import { BottomNav } from "@/components/app/bottom-nav";
 import { MobileHeader } from "@/components/app/mobile-header";
 import { StatCard } from "@/components/app/stat-card";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
-import { BarChart2, Ticket, ShoppingCart, Clock, Check, TrendingUp, AlertCircle } from "lucide-react";
+import { BarChart2, Ticket, ShoppingCart, Check, TrendingUp, ShoppingCart as CartIcon, Ticket as TicketIcon, Check as CheckIcon, BarChart2 as BarChartIcon } from "lucide-react";
 import Link from "next/link";
 import { useWorkspace } from "@/components/providers/workspace-provider";
 import { useEffect, useState } from "react";
@@ -38,20 +38,23 @@ export default function PainelContent() {
 
   if (!supabase) {
     return (
-      <main className="min-h-screen pb-24 px-4 pt-16">
+      <main className="min-h-screen pb-24">
         <MobileHeader title="Painel" userMenu />
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-[var(--danger)] flex items-center gap-2">
-              <AlertCircle className="size-4" /> Supabase não configurado
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-[var(--muted)]">
-              Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY nas variáveis de ambiente.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="px-4 pt-14 space-y-5">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-[var(--danger)] flex items-center gap-2">
+                Supabase não configurado
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-[var(--muted)]">
+                Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY nas variáveis de ambiente.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+        <BottomNav />
       </main>
     );
   }
@@ -221,10 +224,67 @@ export default function PainelContent() {
   const isGestor = userRole === 'gestor';
   const isVendedor = userRole === 'vendedor';
 
+  if (loading) {
+    return (
+      <main className="min-h-screen pb-24">
+        <MobileHeader title="Painel" userMenu />
+        <div className="px-4 pt-14 space-y-5">
+          {/* Skeleton loading - sem textos */}
+          <div className="grid grid-cols-2 gap-3">
+            <SkeletonStat />
+            <SkeletonStat />
+            <SkeletonStat />
+            <SkeletonStat />
+          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChartIcon className="size-4" /> Últimas vendas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SkeletonNumberGrid />
+            </CardContent>
+          </Card>
+        </div>
+        <BottomNav />
+      </main>
+    );
+  }
+
+  if (error && !stats) {
+    return (
+      <main className="min-h-screen pb-24">
+        <MobileHeader title="Painel" userMenu />
+        <div className="px-4 pt-14 space-y-5">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-[var(--danger)] flex items-center gap-2">
+                Erro ao carregar o painel
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-[var(--muted)]">{error}</p>
+            </CardContent>
+            <div className="px-5 pt-4 sm:px-6 sm:pt-5">
+              <button
+                onClick={() => { setError(null); setLoading(true); void loadStats(); }}
+                className="focus-ring inline-flex items-center gap-1 text-xs font-semibold text-[var(--ink)] hover:underline"
+              >
+                Tentar novamente
+              </button>
+            </div>
+          </Card>
+        </div>
+        <BottomNav />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Painel" userMenu />
-      <div className="px-4 pt-14 pb-6 space-y-6">
+      <div className="px-4 pt-14 space-y-5 pb-6">
         {/* Cabeçalho */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -240,48 +300,37 @@ export default function PainelContent() {
               href="/vendas"
               className="focus-ring inline-flex items-center gap-1.5 rounded-xl bg-[var(--ink)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-black active:scale-95 transition"
             >
-              Nova venda <ShoppingCart className="size-4" />
+              Nova venda <CartIcon className="size-4" />
             </Link>
           )}
         </div>
 
-        {/* Estatísticas principais */}
+        {/* Estatísticas */}
         <div className="grid grid-cols-2 gap-4">
-          {loading ? (
-            <>
-              <SkeletonStat label="Vendas" />
-              <SkeletonStat label="Receita" />
-              <SkeletonStat label="Números livres" />
-              <SkeletonStat label="Vendidos" />
-            </>
-          ) : stats ? (
-            <>
-              <StatCard
-                label="Vendas realizadas"
-                value={stats.sold ?? 0}
-                sub={`de ${(stats.totalNumbers ?? stats.sold + stats.available + stats.reserved) || 0} números`}
-                icon={Ticket}
-              />
-              <StatCard
-                label="Receita"
-                value={formatCurrency(stats.totalRevenue)}
-                sub="Vendas pagas"
-                icon={ShoppingCart}
-              />
-              <StatCard
-                label="Números livres"
-                value={stats.available}
-                sub={`Reservados: ${stats.reserved} • Vendidos: ${stats.sold}`}
-                icon={Check}
-              />
-              <StatCard
-                label="Compradores"
-                value={stats.totalBuyers}
-                sub={isVendedor ? "Seus compradores" : "Total de compradores"}
-                icon={BarChart2}
-              />
-            </>
-          ) : null}
+          <StatCard
+            label="Vendas realizadas"
+            value={stats.sold ?? 0}
+            sub={`de ${(stats.totalNumbers ?? stats.sold + stats.available + stats.reserved) || 0} números`}
+            icon={TicketIcon}
+          />
+          <StatCard
+            label="Receita"
+            value={formatCurrency(stats.totalRevenue)}
+            sub="Vendas pagas"
+            icon={CartIcon}
+          />
+          <StatCard
+            label="Números livres"
+            value={stats.available}
+            sub={`Reservados: ${stats.reserved} • Vendidos: ${stats.sold}`}
+            icon={CheckIcon}
+          />
+          <StatCard
+            label="Compradores"
+            value={stats.totalBuyers}
+            sub={isVendedor ? "Seus compradores" : "Total de compradores"}
+            icon={BarChartIcon}
+          />
         </div>
 
         {/* Ações rápidas */}
@@ -327,11 +376,7 @@ export default function PainelContent() {
             )}
           </CardHeader>
           <CardContent>
-            {loading || !stats ? (
-              <div className="flex min-h-[40vh] flex-col items-center justify-center px-6 py-12">
-                <SkeletonNumberGrid />
-              </div>
-            ) : recentSales.length === 0 ? (
+            {recentSales.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
                 <p className="text-sm text-[var(--muted)]">Nenhuma venda registrada ainda.</p>
               </div>
