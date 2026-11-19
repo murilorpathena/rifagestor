@@ -61,7 +61,14 @@ export function MobileHeader({ title, showMenu = true, userMenu = true }: Mobile
           </button>
         ) : null}
 
-        <Link href="/" className="focus-ring flex shrink-0 items-center gap-2 rounded-lg">
+        <Link
+          href="/"
+          className={cn(
+            "focus-ring flex shrink-0 items-center gap-2 rounded-lg",
+            // No desktop, o logo fica por conta do Sidebar; evita duplicação com o header.
+            "lg:hidden",
+          )}
+        >
           <Logo compact />
           <span className="hidden text-sm font-bold tracking-tight sm:inline lg:hidden">
             Rifa<span className="text-[var(--ink)]">Gestor</span>
