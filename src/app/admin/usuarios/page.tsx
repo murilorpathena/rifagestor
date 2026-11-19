@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { KeyRound, Plus, RefreshCw, Trash2, UserCog } from "lucide-react";
+import { KeyRound, Plus, RefreshCw, Trash2, UserCog, AlertTriangle } from "lucide-react";
 import { MobileHeader } from "@/components/app/mobile-header";
 import { BottomNav } from "@/components/app/bottom-nav";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,8 @@ export default function AdminUsuariosPage() {
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
+  const [resetConfirm, setResetConfirm] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
   const [form, setForm] = useState({
     full_name: "",
     email: "",
@@ -123,6 +125,34 @@ export default function AdminUsuariosPage() {
       await loadUsers();
     }
     setBusyId(null);
+  }
+
+  async function handleReset() {
+    if (!supabase) return;
+    if (resetConfirm !== "RESET") {
+      showToast("Digite RESET para confirmar.", "error");
+      return;
+    }
+    setResetBusy(true);
+    try {
+      const { error: e1 } = await supabase.from("sale_numbers").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      const { error: e2 } = await supabase.from("sales").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      const { error: e3 } = await supabase.from("buyers").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      const { error: e4 } = await supabase
+        .from("raffle_numbers")
+        .update({ status: "available", sale_id: null, buyer_id: null, updated_at: new Date().toISOString() })
+        .neq("id", "00000000-0000-0000-0000-000000000000");
+
+      const firstError = e1 ?? e2 ?? e3 ?? e4;
+      if (firstError) throw firstError;
+
+      showToast("Vendas, compradores e números foram resetados.", "success");
+      setResetConfirm("");
+    } catch (err: any) {
+      showToast(err?.message ?? "Erro ao resetar vendas.", "error");
+    } finally {
+      setResetBusy(false);
+    }
   }
 
   async function handleResetPassword(user: UserRow) {
@@ -288,6 +318,42 @@ export default function AdminUsuariosPage() {
               ))}
             </div>
           )}
+        </section>
+
+        {/* Reset de vendas e números (apenas admin) */}
+        <section className="rounded-2xl border border-[var(--line)] bg-amber-50 p-4 card-shadow">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-bold text-[var(--danger)]">
+              <AlertTriangle className="mr-2 size-4" /> Reset de testes
+            </h2>
+            <p className="text-xs text-[var(--muted)]">Apaga vendas, compradores e libera números.</p>
+          </div>
+          <p className="text-xs text-[var(--muted)] mb-3">
+            Use antes de iniciar as vendas reais. Não remove usuários nem altera a configuração da rifa.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Confirme digitando RESET">
+              <Input
+                id="reset-confirm"
+                value={resetConfirm}
+                onChange={(e) => setResetConfirm(e.target.value.toUpperCase())}
+                maxLength={6}
+                placeholder="RESET"
+              />
+            </Field>
+            <div className="flex items-end">
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                disabled={resetBusy || resetConfirm !== "RESET"}
+                onClick={() => void handleReset()}
+                className="w-full sm:w-auto"
+              >
+                {resetBusy ? "Resetando..." : "Resetar tudo"}
+              </Button>
+            </div>
+          </div>
         </section>
       </div>
       <BottomNav />
