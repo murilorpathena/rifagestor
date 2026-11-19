@@ -298,7 +298,7 @@ export default function VendasPage() {
                 <Ticket className="size-4" /> Comprador
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-4">
               <BuyerForm initial={buyer} onSubmit={handleBuyerSubmit} loading={submitting} />
             </CardContent>
           </Card>
