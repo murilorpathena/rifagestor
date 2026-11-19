@@ -28,6 +28,7 @@ export default function PainelContent() {
   const [stats, setStats] = useState<any>(null);
   const [recentSales, setRecentSales] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!sb || wsLoading || !profile) return;
@@ -51,8 +52,10 @@ export default function PainelContent() {
   async function loadStats() {
     if (!sb) return;
     setLoading(true);
+    setError(null);
 
-    if (userRole === 'admin') {
+    try {
+      if (userRole === 'admin') {
       const [orgs, nums, sales, buyers] = await Promise.all([
         sb.from("organizations").select("id", { count: "exact" }),
         sb.from("raffle_numbers").select("id, status"),
@@ -201,8 +204,11 @@ export default function PainelContent() {
         buyer_name: buyersMap[sale.buyer_id] || "Comprador",
       })));
     }
-
-    setLoading(false);
+    } catch (err: any) {
+      setError(err?.message ?? "Não foi possível carregar o painel.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   const isAdmin = userRole === 'admin';
@@ -245,6 +251,19 @@ export default function PainelContent() {
             <StatCard label="Compradores" value={stats.totalBuyers} icon={Ticket} />
             <StatCard label="Números livres" value={stats.available} sub={`de ${stats.totalNumbers ?? stats.sold + stats.available + stats.reserved}`} icon={Check} />
             <StatCard label="Receita" value={formatCurrency(stats.totalRevenue)} sub="Vendas pagas" icon={ShoppingCart} />
+          </div>
+        ) : null}
+
+        {!loading && error && !stats ? (
+          <div className="rounded-2xl border border-[var(--line)] bg-amber-50 p-4 card-shadow">
+            <h3 className="text-sm font-bold text-amber-800">Erro ao carregar o painel</h3>
+            <p className="text-sm text-amber-700">{error}</p>
+            <button
+              onClick={() => { setError(null); setLoading(true); void loadStats(); }}
+              className="mt-2 text-xs font-semibold text-[var(--ink)] hover:underline"
+            >
+              Tentar novamente
+            </button>
           </div>
         ) : null}
 
