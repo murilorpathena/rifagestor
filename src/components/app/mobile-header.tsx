@@ -163,17 +163,6 @@ export function MobileHeader({ title, showMenu = true, userMenu = true }: Mobile
             </nav>
 
             <div className="shrink-0 border-t border-[var(--line)] p-3">
-              <Link
-                href="/perfil"
-                onClick={() => setNavOpen(false)}
-                className={cn(
-                  "focus-ring flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium hover:bg-[#f7f7f7]",
-                  pathname === "/perfil" ? "bg-[#f7f7f7] text-[var(--ink)]" : "text-[var(--muted)]",
-                )}
-              >
-                <User className="size-5" />
-                Meu perfil
-              </Link>
               <button
                 type="button"
                 onClick={() => void signOut()}
