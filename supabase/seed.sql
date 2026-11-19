@@ -41,7 +41,7 @@ values (
   'Configure os detalhes da rifa na tela de gestão.',
   null,
   null,
-  1000,
+  2000,
   100,
   1,
   'active',

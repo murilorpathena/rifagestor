@@ -23,13 +23,19 @@ export const buyerSchema = z.object({
   name: z.string().trim().min(2, "Informe o nome do comprador."),
   cpf: z
     .string()
-    .transform(onlyDigits)
-    .refine(isValidCpf, "Informe um CPF válido."),
-  email: z.union([z.literal(""), emailSchema]),
+    .optional()
+    .transform((value) => onlyDigits(value ?? ""))
+    .refine((value) => value === "" || isValidCpf(value), "Informe um CPF válido."),
+  email: z
+    .string()
+    .optional()
+    .transform((value) => value ?? "")
+    .refine((value) => value === "" || emailSchema.safeParse(value).success, "Informe um e-mail válido."),
   whatsapp: z
     .string()
-    .transform(onlyDigits)
-    .refine((value) => value.length >= 10, "Informe um WhatsApp válido."),
+    .optional()
+    .transform((value) => onlyDigits(value ?? ""))
+    .refine((value) => value === "" || value.length >= 10, "Informe um WhatsApp válido."),
 });
 
 export const saleSchema = z.object({

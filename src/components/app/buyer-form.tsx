@@ -88,7 +88,6 @@ export function BuyerForm({ initial, onSubmit, loading, className }: BuyerFormPr
             placeholder="000.000.000-00"
             inputMode="numeric"
             maxLength={14}
-            required
             className="pl-10"
           />
         </div>
@@ -109,7 +108,7 @@ export function BuyerForm({ initial, onSubmit, loading, className }: BuyerFormPr
         </div>
       </Field>
 
-      <Field label="WhatsApp" htmlFor="buyer-whatsapp" error={errors.whatsapp} hint="Usado para contato após o sorteio.">
+      <Field label="WhatsApp" htmlFor="buyer-whatsapp" error={errors.whatsapp} hint="Opcional. Usado para contato após o sorteio.">
         <div className="relative">
           <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#999999]" />
           <Input
@@ -121,7 +120,6 @@ export function BuyerForm({ initial, onSubmit, loading, className }: BuyerFormPr
             placeholder="(11) 90000-0000"
             inputMode="tel"
             maxLength={15}
-            required
             className="pl-10"
           />
         </div>
