@@ -292,7 +292,7 @@ export default function PainelContent() {
                 <TrendingUp className="size-4" /> Ações rápidas
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Link
                   href="/vendas"
