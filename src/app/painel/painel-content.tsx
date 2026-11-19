@@ -293,7 +293,7 @@ export default function PainelContent() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Link
                   href="/vendas"
                   className="focus-ring flex items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-white px-4 py-4 text-sm font-medium text-[var(--ink)] hover:bg-[#f7f7f7] active:scale-95 transition"

@@ -310,7 +310,7 @@ export default function VendasPage() {
             {/* HEADER DO TOPO: comprador, resumo e botoes */}
             <Card>
               <CardHeader className="p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex-1">
                     <CardTitle>Selecionar números</CardTitle>
                     <p className="text-xs text-[var(--muted)]">
@@ -329,7 +329,7 @@ export default function VendasPage() {
                 {/* Resumo de selecao no topo */}
                 {selectedList.length > 0 && (
                   <div className="mt-3 border-t border-[var(--line)] pt-3">
-                    <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center justify-between px-4 py-2 bg-[#f7f7f7] rounded-lg">
                       <span className="text-sm font-semibold">{selectedList.length} número(s) selecionado(s)</span>
                       <span className="text-sm font-bold text-[var(--ink)]">{formatCurrency(total)}</span>
                     </div>
