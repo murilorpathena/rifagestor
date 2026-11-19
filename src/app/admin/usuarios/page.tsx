@@ -45,7 +45,7 @@ export default function AdminUsuariosPage() {
     full_name: "",
     email: "",
     password: makePassword(),
-    role: "vendedor" as "gestor" | "vendedor",
+    role: "vendedor" as "admin" | "gestor" | "vendedor",
   });
 
   const loadUsers = useCallback(async () => {
@@ -185,10 +185,11 @@ export default function AdminUsuariosPage() {
               <Select
                 id="new-role"
                 value={form.role}
-                onChange={(e) => setForm((p) => ({ ...p, role: e.target.value as "gestor" | "vendedor" }))}
+                onChange={(e) => setForm((p) => ({ ...p, role: e.target.value as "admin" | "gestor" | "vendedor" }))}
               >
                 <option value="vendedor">Vendedor</option>
                 <option value="gestor">Gestor</option>
+                <option value="admin">Administrador</option>
               </Select>
             </Field>
             <Field label="Senha (gerada)" htmlFor="new-password">
