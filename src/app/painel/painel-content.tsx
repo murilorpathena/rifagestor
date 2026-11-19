@@ -9,7 +9,7 @@ import { BarChart2, Ticket, ShoppingCart, Check, TrendingUp, ShoppingCart as Car
 import Link from "next/link";
 import { useWorkspace } from "@/components/providers/workspace-provider";
 import { useEffect, useState } from "react";
-import { SkeletonStat, SkeletonNumberGrid } from "@/components/app/skeleton-loading";
+import { SkeletonStat, SkeletonNumberGrid, SkeletonCard } from "@/components/app/skeleton-loading";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 interface SaleRow {
@@ -40,7 +40,7 @@ export default function PainelContent() {
     return (
       <main className="min-h-screen pb-24">
         <MobileHeader title="Painel" userMenu />
-        <div className="px-4 pt-14 space-y-5">
+        <div className="px-4 pt-12 space-y-5">
           <Card>
             <CardHeader>
               <CardTitle className="text-[var(--danger)] flex items-center gap-2">
@@ -228,24 +228,15 @@ export default function PainelContent() {
     return (
       <main className="min-h-screen pb-24">
         <MobileHeader title="Painel" userMenu />
-        <div className="px-4 pt-14 space-y-5">
-          {/* Skeleton loading - sem textos */}
+        <div className="px-4 pt-12 space-y-4">
+          {/* Skeleton loading - APENAS placeholders, SEM textos */}
           <div className="grid grid-cols-2 gap-3">
             <SkeletonStat />
             <SkeletonStat />
             <SkeletonStat />
             <SkeletonStat />
           </div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChartIcon className="size-4" /> Últimas vendas
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <SkeletonNumberGrid />
-            </CardContent>
-          </Card>
+          <SkeletonCard />
         </div>
         <BottomNav />
       </main>
@@ -256,7 +247,7 @@ export default function PainelContent() {
     return (
       <main className="min-h-screen pb-24">
         <MobileHeader title="Painel" userMenu />
-        <div className="px-4 pt-14 space-y-5">
+        <div className="px-4 pt-12 space-y-5">
           <Card>
             <CardHeader>
               <CardTitle className="text-[var(--danger)] flex items-center gap-2">
@@ -281,36 +272,38 @@ export default function PainelContent() {
     );
   }
 
+  const totalNumbers = stats.totalNumbers ?? (stats.sold + stats.available + stats.reserved);
+
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Painel" userMenu />
-      <div className="px-4 pt-14 space-y-5 pb-6">
-        {/* Cabeçalho */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="px-4 pt-12 space-y-4 pb-6">
+        {/* Cabeçalho compacto */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl font-extrabold tracking-tight">Painel</h1>
-            <p className="text-sm text-[var(--muted)]">
+            <h1 className="text-lg font-extrabold tracking-tight">Painel</h1>
+            <p className="text-xs text-[var(--muted)]">
               {isAdmin ? "Visão geral de todas as organizações" :
-               isGestor ? `Visão da organização: ${organization?.name}` :
+               isGestor ? `Organização: ${organization?.name}` :
                "Suas vendas e números"}
             </p>
           </div>
           {!isVendedor && (
             <Link
               href="/vendas"
-              className="focus-ring inline-flex items-center gap-1.5 rounded-xl bg-[var(--ink)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-black active:scale-95 transition"
+              className="focus-ring inline-flex items-center gap-1.5 rounded-xl bg-[var(--ink)] px-3 py-2 text-sm font-semibold text-white hover:bg-black active:scale-95 transition"
             >
-              Nova venda <CartIcon className="size-4" />
+              Nova venda <CartIcon className="size-3.5" />
             </Link>
           )}
         </div>
 
-        {/* Estatísticas */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Estatísticas - grid mais compacto */}
+        <div className="grid grid-cols-2 gap-3">
           <StatCard
             label="Vendas realizadas"
             value={stats.sold ?? 0}
-            sub={`de ${(stats.totalNumbers ?? stats.sold + stats.available + stats.reserved) || 0} números`}
+            sub={`de ${totalNumbers || 0} números`}
             icon={TicketIcon}
           />
           <StatCard
@@ -333,72 +326,62 @@ export default function PainelContent() {
           />
         </div>
 
-        {/* Ações rápidas */}
+        {/* Ações rápidas - apenas para não vendedores */}
         {!isVendedor && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="size-4" /> Ações rápidas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Link
-                  href="/vendas"
-                  className="focus-ring flex items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-white px-4 py-4 text-sm font-medium text-[var(--ink)] hover:bg-[#f7f7f7] active:scale-95 transition"
-                >
-                  <ShoppingCart className="size-5" /> Nova venda
-                </Link>
-                <Link
-                  href="/numeros"
-                  className="focus-ring flex items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-white px-4 py-4 text-sm font-medium text-[var(--ink)] hover:bg-[#f7f7f7] active:scale-95 transition"
-                >
-                  <Ticket className="size-5" /> Gerenciar números
-                </Link>
-              </div>
-            </CardContent>
+          <Card className="p-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <Link
+                href="/vendas"
+                className="focus-ring flex items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-white px-3 py-3 text-sm font-medium text-[var(--ink)] hover:bg-[#f7f7f7] active:scale-95 transition"
+              >
+                <ShoppingCart className="size-4.5" /> Nova venda
+              </Link>
+              <Link
+                href="/numeros"
+                className="focus-ring flex items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-white px-3 py-3 text-sm font-medium text-[var(--ink)] hover:bg-[#f7f7f7] active:scale-95 transition"
+              >
+                <Ticket className="size-4.5" /> Gerenciar números
+              </Link>
+            </div>
           </Card>
         )}
 
         {/* Últimas vendas */}
-        <Card>
-          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <Card className="p-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <div>
-              <CardTitle>Últimas vendas</CardTitle>
-              {!isVendedor && (
-                <p className="text-xs text-[var(--muted)]">Vendas mais recentes da rifa</p>
-              )}
+              <p className="text-sm font-semibold">Últimas vendas</p>
+              {!isVendedor && <p className="text-xs text-[var(--muted)]">Vendas mais recentes da rifa</p>}
             </div>
             {!isVendedor && (
               <Link href="/vendas/historico" className="text-xs font-semibold text-[var(--ink)] hover:underline">
                 Ver tudo →
               </Link>
             )}
-          </CardHeader>
-          <CardContent>
-            {recentSales.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center">
-                <p className="text-sm text-[var(--muted)]">Nenhuma venda registrada ainda.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentSales.map((sale) => (
-                  <div key={sale.id} className="flex items-center justify-between px-3 py-3 rounded-xl border border-[var(--line)] bg-[#f7f7f7]">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{sale.buyer_name}</p>
-                      <p className="text-xs text-[var(--muted)] truncate">{formatDateTime(sale.created_at)}</p>
-                    </div>
-                    <div className="text-right min-w-[120px]">
-                      <p className="text-sm font-bold text-[var(--ink)]">{formatCurrency(sale.total_cents)}</p>
-                      <span className={`text-xs font-medium block ${sale.payment_status === "paid" ? "text-green-600" : sale.payment_status === "pending" ? "text-amber-600" : "text-[var(--muted)]"}`}>
-                        {sale.payment_status === "paid" ? "Pago" : sale.payment_status === "pending" ? "Pendente" : "Cancelado"}
-                      </span>
-                    </div>
+          </div>
+
+          {recentSales.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <p className="text-sm text-[var(--muted)]">Nenhuma venda registrada ainda.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {recentSales.map((sale) => (
+                <div key={sale.id} className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-[var(--line)] bg-[#f7f7f7]">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{sale.buyer_name}</p>
+                    <p className="text-xs text-[var(--muted)] truncate">{formatDateTime(sale.created_at)}</p>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
+                  <div className="text-right min-w-[100px]">
+                    <p className="text-sm font-bold text-[var(--ink)]">{formatCurrency(sale.total_cents)}</p>
+                    <span className={`text-xs font-medium block ${sale.payment_status === "paid" ? "text-green-600" : sale.payment_status === "pending" ? "text-amber-600" : "text-[var(--muted)]"}`}>
+                      {sale.payment_status === "paid" ? "Pago" : sale.payment_status === "pending" ? "Pendente" : "Cancelado"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
       <BottomNav />

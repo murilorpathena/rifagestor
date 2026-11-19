@@ -5,7 +5,7 @@ insert into public.profiles (id, name, email, role)
 values (
   'db99e183-3351-4ac7-ae15-3013a09f91b2',
   'Administrador',
-  'rifa@adm.com',
+  'mrp@adm.com',
   'admin'
 )
 on conflict (id) do update

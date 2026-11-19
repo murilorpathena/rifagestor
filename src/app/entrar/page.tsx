@@ -20,6 +20,11 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Redireciona se já logado (depois dos hooks, antes dos returns).
+  useEffect(() => {
+    if (!loading && user) router.replace("/painel");
+  }, [loading, router, user]);
+
   // Enquanto verifica a sessão, não renderiza o formulário.
   if (loading) {
     return (
@@ -67,10 +72,6 @@ export default function LoginPage() {
   if (user) {
     return null;
   }
-
-  useEffect(() => {
-    if (!loading && user) router.replace("/painel");
-  }, [loading, router, user]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -20,13 +20,13 @@ export function SkeletonNumberGrid({ count = 20 }: { count?: number }) {
   );
 }
 
-export function SkeletonStat({ label = "Carregando..." }: { label?: string }) {
+export function SkeletonStat() {
   return (
     <div className="rounded-xl border border-[var(--line)] bg-white p-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="h-3 w-24 rounded bg-[#e5e5e5] mb-2">{label}</div>
-          <div className="h-6 w-16 rounded bg-[#e5e5e5]" />
+          <div className="h-3 w-20 rounded bg-[#e5e5e5] mb-2" />
+          <div className="h-6 w-14 rounded bg-[#e5e5e5]" />
         </div>
         <div className="grid size-8 place-items-center rounded-lg bg-[#f7f7f7]">
           <div className="h-4 w-4 rounded-full bg-[#e5e5e5] animate-pulse" />
