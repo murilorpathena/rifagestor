@@ -40,7 +40,7 @@ export default function PainelContent() {
     return (
       <main className="min-h-screen pb-24">
         <MobileHeader title="Painel" userMenu />
-        <div className="px-4 pt-12 space-y-5">
+        <div className="px-4 pt-8 space-y-5">
           <Card>
             <CardHeader>
               <CardTitle className="text-[var(--danger)] flex items-center gap-2">
@@ -228,7 +228,7 @@ export default function PainelContent() {
     return (
       <main className="min-h-screen pb-24">
         <MobileHeader title="Painel" userMenu />
-        <div className="px-4 pt-12 space-y-4">
+        <div className="px-4 pt-8 space-y-4">
           {/* Skeleton loading - APENAS placeholders, SEM textos */}
           <div className="grid grid-cols-2 gap-3">
             <SkeletonStat />
@@ -247,7 +247,7 @@ export default function PainelContent() {
     return (
       <main className="min-h-screen pb-24">
         <MobileHeader title="Painel" userMenu />
-        <div className="px-4 pt-12 space-y-5">
+        <div className="px-4 pt-8 space-y-5">
           <Card>
             <CardHeader>
               <CardTitle className="text-[var(--danger)] flex items-center gap-2">
@@ -277,7 +277,7 @@ export default function PainelContent() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Painel" userMenu />
-      <div className="px-4 pt-12 space-y-4 pb-6">
+      <div className="px-4 pt-8 space-y-4 pb-6">
         {/* Cabeçalho compacto */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
