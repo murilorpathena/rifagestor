@@ -168,7 +168,7 @@ export default function VendasPage() {
     return (
       <main className="min-h-screen pb-24">
         <MobileHeader title="Nova venda" />
-        <div className="px-4 py-12 flex flex-col items-center justify-center min-h-[40vh]">
+        <div className="px-4 pt-16 pb-6 flex flex-col items-center justify-center min-h-[40vh]">
           <LoaderCircle className="size-8 animate-spin text-[var(--ink)]" />
           <p className="mt-3 text-sm text-[var(--muted)]">Carregando números...</p>
         </div>
@@ -180,7 +180,7 @@ export default function VendasPage() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Nova venda" />
-      <div className="px-4 pb-6 space-y-5">
+      <div className="px-4 pt-16 pb-6 space-y-5">
         {/* Buyer form step */}
         {buyerStep === "form" && (
           <Card>

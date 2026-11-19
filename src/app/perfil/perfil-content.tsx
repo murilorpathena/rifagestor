@@ -116,7 +116,7 @@ export default function PerfilContent() {
     return (
       <main className="min-h-screen pb-24">
         <MobileHeader title="Meu perfil" userMenu />
-        <div className="px-4 py-6 space-y-5">
+        <div className="px-4 pt-16 space-y-5">
           <h1 className="text-xl font-extrabold tracking-tight">Perfil</h1>
           <p className="py-10 text-center text-sm text-[var(--muted)]">Carregando perfil...</p>
         </div>
@@ -128,7 +128,7 @@ export default function PerfilContent() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Meu perfil" userMenu />
-      <div className="px-4 py-6 space-y-5">
+      <div className="px-4 pt-16 space-y-5">
         <h1 className="text-xl font-extrabold tracking-tight">Perfil</h1>
 
         <section className="rounded-2xl border border-[var(--line)] bg-white p-4 card-shadow">

@@ -140,7 +140,7 @@ export default function EquipePage() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Equipe" userMenu />
-      <div className="px-4 py-6 space-y-5 pb-6">
+      <div className="px-4 pt-16 space-y-5 pb-6">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-extrabold tracking-tight">Equipe de vendas</h1>

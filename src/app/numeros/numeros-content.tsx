@@ -83,7 +83,7 @@ export default function NumerosContent() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Números" userMenu />
-      <div className="px-4 py-6 space-y-6 pb-6">
+      <div className="px-4 pt-16 space-y-6 pb-6">
         {wsLoading ? (
           <SkeletonNumberGrid />
         ) : !raffle ? (

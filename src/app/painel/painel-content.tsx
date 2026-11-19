@@ -222,7 +222,7 @@ export default function PainelContent() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Painel" userMenu />
-      <div className="px-4 py-6 space-y-6 pb-6">
+      <div className="px-4 pt-16 pb-6 space-y-6 pb-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-extrabold tracking-tight">Painel</h1>
