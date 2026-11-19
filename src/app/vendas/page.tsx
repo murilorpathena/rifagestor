@@ -6,6 +6,7 @@ import { BottomNav } from "@/components/app/bottom-nav";
 import { MobileHeader } from "@/components/app/mobile-header";
 import { BuyerForm } from "@/components/app/buyer-form";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn, formatCurrency } from "@/lib/utils";
 import {
   calculateSaleTotalCents,
@@ -44,6 +45,8 @@ export default function VendasPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [completedBuyerName, setCompletedBuyerName] = useState("");
+  const [autoMode, setAutoMode] = useState(false);
+  const [autoQuantity, setAutoQuantity] = useState(1);
 
   useEffect(() => {
     if (!supabase) {
@@ -103,6 +106,27 @@ export default function VendasPage() {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      return next;
+    });
+  };
+
+  const handleAutoSelect = () => {
+    if (!autoMode || autoQuantity <= 0) return;
+    const availableIds = availableNumbers.map((n) => n.id);
+    const alreadySelected = new Set(selectedNumbers);
+    const remaining = availableIds.filter((id) => !alreadySelected.has(id));
+
+    // Embaralhar (Fisher-Yates) e escolher os primeiros autoQuantity
+    const shuffled = remaining.slice();
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const toSelect = shuffled.slice(0, autoQuantity);
+
+    setSelectedNumbers((prev) => {
+      const next = new Set(prev);
+      toSelect.forEach((id) => next.add(id));
       return next;
     });
   };
@@ -197,18 +221,64 @@ export default function VendasPage() {
         {buyerStep === "numbers" && (
           <>
             <Card>
-              <CardHeader className="flex items-center justify-between">
-                <div>
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex-1">
                   <CardTitle>Selecionar números</CardTitle>
                   <p className="text-xs text-[var(--muted)]">
                     {selectedList.length} de {availableNumbers.length} disponíveis
                   </p>
                 </div>
-                <Button size="sm" onClick={() => setBuyerStep("confirm")} disabled={selectedList.length === 0} className="hidden sm:inline">
-                  Continuar
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setBuyerStep("form")}>
+                    <Minus className="mr-1.5 size-3.5" /> Alterar comprador
+                  </Button>
+                  <Button size="sm" onClick={() => setBuyerStep("confirm")} disabled={selectedList.length === 0} className="hidden sm:inline">
+                    Continuar <Ticket className="ml-1 size-3.5" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
+                {/* Modo automático / sortear números */}
+                <div className="px-4 py-3 border-b border-[var(--line)]">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-[var(--muted)]">
+                      <input
+                        type="checkbox"
+                        checked={autoMode}
+                        onChange={() => setAutoMode(!autoMode)}
+                        className="rounded border-[var(--line)] text-[var(--ink)] focus:ring-[var(--ink)]"
+                      />
+                      <span>Modo automático (sortear números)</span>
+                    </label>
+                    {autoMode && (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          max={availableNumbers.length}
+                          value={autoQuantity}
+                          onChange={(e) => setAutoQuantity(Math.max(1, Math.min(availableNumbers.length, Number(e.target.value) || 1)))}
+                          placeholder="Qtd."
+                          className="w-16 text-xs"
+                          disabled={autoQuantity >= availableNumbers.length}
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleAutoSelect()}
+                          disabled={autoQuantity >= availableNumbers.length || selectedList.length >= availableNumbers.length}
+                        >
+                          Sortear
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  {autoMode && autoQuantity > 0 && (
+                    <p className="text-xs text-[var(--muted)] mt-1">
+                      {autoQuantity} número(s) serão sorteados entre os {availableNumbers.length} disponíveis.
+                    </p>
+                  )}
+                </div>
+
                 <div className="px-4 py-3">
                   <div className="grid grid-cols-4 gap-2 px-1 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12">
                     {availableNumbers.map((num) => {
@@ -218,6 +288,7 @@ export default function VendasPage() {
                           key={num.id}
                           type="button"
                           onClick={() => handleNumberToggle(num.id)}
+                          disabled={autoMode && selectedList.length >= autoQuantity && !selected}
                           className={cn(
                             "aspect-square rounded-lg border flex items-center justify-center text-xs font-medium transition disabled:opacity-30 disabled:hover:bg-none",
                             selected
