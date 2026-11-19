@@ -111,6 +111,20 @@ Deno.serve(async (req) => {
       if (!organizationId) return json({ error: 'Gestor sem organização vinculada' }, 400);
     }
 
+    // Verifica se o email já está em uso (auth ou profile)
+    const { data: existingUsers } = await supabase.auth.admin.listUsers();
+    if (existingUsers?.some((u) => u.email?.toLowerCase() === body.email.toLowerCase())) {
+      return json({ error: 'Já existe um usuário com este e-mail.' }, 400);
+    }
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', body.email)
+      .maybeSingle();
+    if (existingProfile) {
+      return json({ error: 'Já existe um usuário com este e-mail.' }, 400);
+    }
+
     const { data: created, error: createError } = await supabase.auth.admin.createUser({
       email: body.email,
       password: body.password,

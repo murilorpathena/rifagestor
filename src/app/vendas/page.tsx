@@ -289,7 +289,7 @@ export default function VendasPage() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Nova venda" />
-      <div className="px-4 pt-12 pb-6 space-y-5">
+      <div className="px-4 pt-14 pb-6 space-y-5">
         {/* Buyer form step */}
         {buyerStep === "form" && (
           <Card>

@@ -224,7 +224,7 @@ export default function PainelContent() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Painel" userMenu />
-      <div className="px-4 pt-16 pb-6 space-y-6">
+      <div className="px-4 pt-14 pb-6 space-y-6">
         {/* Cabeçalho */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>

@@ -163,7 +163,7 @@ export default function ConfiguracoesPage() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Rifa" userMenu />
-      <div className="px-4 pt-16 space-y-5">
+      <div className="px-4 pt-14 space-y-5">
         <div>
           <h1 className="text-xl font-extrabold tracking-tight">Configurações da rifa</h1>
           <p className="text-sm text-[var(--muted)]">

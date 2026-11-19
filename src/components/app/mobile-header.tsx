@@ -63,7 +63,7 @@ export function MobileHeader({ title, showMenu = true, userMenu = true }: Mobile
 
         <Link
           href="/"
-          className="focus-ring flex items-center gap-1.5 rounded-lg px-3 py-2 text-[var(--ink)] font-bold tracking-tight flex-1 text-center uppercase text-[10px]"
+          className="focus-ring flex items-center gap-1.5 rounded-lg px-3 py-2 text-[var(--ink)] font-bold tracking-tight flex-1 text-center sm:text-base"
         >
           RIFA<span className="text-[var(--ink)]">GESTOR</span>
         </Link>

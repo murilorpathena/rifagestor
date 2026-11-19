@@ -184,26 +184,6 @@ export default function LoginPage() {
               Entrar <ArrowRight className="size-4" />
             </Button>
           </form>
-
-          <div className="my-7 flex items-center gap-3 text-xs font-medium text-[#8b9894]">
-            <span className="h-px flex-1 bg-[var(--line)]" />
-            ou
-            <span className="h-px flex-1 bg-[var(--line)]" />
-          </div>
-
-          <Link
-            href="/cadastro"
-            className="focus-ring flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-white font-semibold shadow-sm transition hover:border-[#b9c9c5] hover:bg-[#f8faf9]"
-          >
-            <TicketCheck className="size-4 text-[var(--ink)]" />
-            Criar minha primeira rifa
-          </Link>
-          <p className="mt-6 text-center text-sm text-[var(--muted)]">
-            Ainda não tem conta?{" "}
-            <Link href="/cadastro" className="font-bold text-[var(--ink)] hover:underline">
-              Cadastre-se grátis
-            </Link>
-          </p>
         </div>
       </section>
     </main>
