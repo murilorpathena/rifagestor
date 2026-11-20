@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useClientSupabase } from "@/hooks/use-client-supabase";
+import { useRealtimeRefresh } from "@/hooks/use-realtime";
 import { BottomNav } from "@/components/app/bottom-nav";
 import { MobileHeader } from "@/components/app/mobile-header";
 import { BuyerForm } from "@/components/app/buyer-form";
@@ -105,6 +106,23 @@ export default function VendasPage() {
   const availableNumbers = selectableNumbers(numbers);
   const selectedList = validSelectedNumbers(numbers, selectedNumbers);
   const total = calculateSaleTotalCents(price, selectedList.length);
+
+  // Tempo real: se outro dispositivo vender/reservar numeros, a grade se atualiza.
+  const reloadNumbers = useCallback(async () => {
+    if (!supabase || !raffle) return;
+    const { data } = await supabase
+      .from("raffle_numbers")
+      .select("id, number, status")
+      .eq("raffle_id", raffle.id)
+      .order("number", { ascending: true });
+    setNumbers(data ?? []);
+  }, [supabase, raffle]);
+
+  useRealtimeRefresh(
+    ["raffle_numbers"],
+    reloadNumbers,
+    Boolean(supabase && raffle),
+  );
 
   const handleNumberToggle = (id: string) => {
     const item = numbers.find((n) => n.id === id);
@@ -277,7 +295,7 @@ export default function VendasPage() {
     return (
       <main className="min-h-screen pb-24">
         <MobileHeader title="Nova venda" />
-        <div className="px-4 pt-16 pb-6 flex flex-col items-center justify-center min-h-[40vh]">
+        <div className="px-4 pt-8 pb-6 flex flex-col items-center justify-center min-h-[40vh]">
           <LoaderCircle className="size-8 animate-spin text-[var(--ink)]" />
           <p className="mt-3 text-sm text-[var(--muted)]">Carregando números...</p>
         </div>
@@ -289,7 +307,7 @@ export default function VendasPage() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title="Nova venda" />
-      <div className="px-4 pt-14 pb-6 space-y-5">
+      <div className="px-4 pt-4 pb-6 space-y-5">
         {/* Buyer form step */}
         {buyerStep === "form" && (
           <Card>

@@ -12,6 +12,7 @@ import { formatCurrency } from "@/lib/utils";
 import { useToast } from "@/components/providers/toast-provider";
 import { useWorkspace } from "@/components/providers/workspace-provider";
 import { useClientSupabase } from "@/hooks/use-client-supabase";
+import { useRealtimeRefresh } from "@/hooks/use-realtime";
 import { SkeletonNumberGrid } from "@/components/app/skeleton-loading";
 import type { RaffleNumber } from "@/lib/types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -48,6 +49,13 @@ export default function NumerosContent() {
     if (wsLoading) return;
     void load();
   }, [wsLoading, load]);
+
+  // Tempo real: a grade reflete reservas/vendas feitas por outros usuarios.
+  useRealtimeRefresh(
+    ["raffle_numbers"],
+    () => load(),
+    Boolean(supabase && raffle && !wsLoading),
+  );
 
   function toggle(id: string) {
     setSelected((current) => {

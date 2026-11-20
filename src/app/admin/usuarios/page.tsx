@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/input";
 import { useToast } from "@/components/providers/toast-provider";
 import { useClientSupabase } from "@/hooks/use-client-supabase";
+import { useRealtimeRefresh } from "@/hooks/use-realtime";
 import { useWorkspace } from "@/components/providers/workspace-provider";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
@@ -66,6 +67,13 @@ export default function AdminUsuariosPage() {
   useEffect(() => {
     void loadUsers();
   }, [loadUsers]);
+
+  // Tempo real: lista de usuarios reflete mudancas de papel/criacoes.
+  useRealtimeRefresh(
+    ["profiles", "organization_members"],
+    () => loadUsers(),
+    Boolean(supabase),
+  );
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();

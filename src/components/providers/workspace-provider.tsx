@@ -1,9 +1,10 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { getSupabase } from "@/lib/supabase";
 import type { Membership, Organization, Profile, Raffle, UserRole } from "@/lib/types";
 import { useAuth } from "./auth-provider";
+import { useRealtimeRefresh } from "@/hooks/use-realtime";
 
 interface WorkspaceContextValue {
   organization: Organization | null;
@@ -16,6 +17,8 @@ interface WorkspaceContextValue {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
+  /** Recarrega sem piscar o skeleton (usado pelo realtime). */
+  refreshSilent: () => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -30,7 +33,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const load = useCallback(async (showLoading: boolean) => {
     if (!user) {
       setOrganization(null);
       setRaffle(null);
@@ -41,8 +44,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    if (showLoading) {
+      setLoading(true);
+      setError(null);
+    }
 
     const supabase = getSupabase();
     if (!supabase) {
@@ -118,9 +123,24 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
   }, [user]);
 
+  const refresh = useCallback(async () => {
+    await load(true);
+  }, [load]);
+
+  const refreshSilent = useCallback(async () => {
+    await load(false);
+  }, [load]);
+
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Tempo real global: mudancas em rifa/perfil/vinculos refletem em todo o app.
+  useRealtimeRefresh(
+    ["raffles", "profiles", "organization_members"],
+    () => refreshSilent(),
+    Boolean(user),
+  );
 
   const canManage =
     userRole === "admin" || membership?.role === "owner" || membership?.role === "gestor";
@@ -136,8 +156,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       loading,
       error,
       refresh,
+      refreshSilent,
     }),
-    [organization, raffle, membership, profile, userRole, canManage, loading, error, refresh],
+    [organization, raffle, membership, profile, userRole, canManage, loading, error, refresh, refreshSilent],
   );
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;

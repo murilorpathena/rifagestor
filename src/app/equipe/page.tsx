@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 import { useToast } from "@/components/providers/toast-provider";
 import { useClientSupabase } from "@/hooks/use-client-supabase";
+import { useRealtimeRefresh } from "@/hooks/use-realtime";
 import { useWorkspace } from "@/components/providers/workspace-provider";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
@@ -96,6 +97,13 @@ export default function EquipePage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Tempo real: equipe reflete entradas, remocoes e vendas imediatamente.
+  useRealtimeRefresh(
+    ["organization_members", "profiles", "sales"],
+    () => load(),
+    Boolean(supabase && organization?.id),
+  );
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();

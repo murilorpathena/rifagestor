@@ -11,6 +11,7 @@ import { useWorkspace } from "@/components/providers/workspace-provider";
 import { useEffect, useState } from "react";
 import { SkeletonStat, SkeletonNumberGrid, SkeletonCard } from "@/components/app/skeleton-loading";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { useRealtimeRefresh } from "@/hooks/use-realtime";
 
 interface SaleRow {
   id: string;
@@ -35,6 +36,13 @@ export default function PainelContent() {
     if (!sb || wsLoading || !profile) return;
     void loadStats();
   }, [wsLoading, profile, userRole, organization, sb]);
+
+  // Tempo real: painel se atualiza sozinho quando ha venda, numero ou comprador.
+  useRealtimeRefresh(
+    ["sales", "raffle_numbers", "buyers"],
+    () => loadStats(),
+    Boolean(sb && !wsLoading && profile),
+  );
 
   if (!supabase) {
     return (

@@ -8,6 +8,7 @@ import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { useToast } from "@/components/providers/toast-provider";
 import { useWorkspace } from "@/components/providers/workspace-provider";
 import { useClientSupabase } from "@/hooks/use-client-supabase";
+import { useRealtimeRefresh } from "@/hooks/use-realtime";
 import { SkeletonNumberGrid } from "@/components/app/skeleton-loading";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -68,6 +69,13 @@ export default function HistoricoContent() {
   useEffect(() => {
     void loadSales();
   }, [loadSales]);
+
+  // Tempo real: historico reflete status/novas vendas sem recarregar a pagina.
+  useRealtimeRefresh(
+    ["sales", "buyers", "profiles"],
+    () => loadSales(),
+    Boolean(supabase && !wsLoading),
+  );
 
   async function updateStatus(saleId: string, status: "paid" | "cancelled") {
     if (!supabase) return;
