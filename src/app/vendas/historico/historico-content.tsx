@@ -106,7 +106,7 @@ export default function HistoricoContent() {
   return (
     <main className="min-h-screen pb-24">
       <MobileHeader title={userRole === "vendedor" ? "Minhas Vendas" : "Histórico de vendas"} userMenu />
-      <div className="px-4 pt-14 space-y-5 pb-6">
+      <div className="px-4 pt-4 space-y-5 pb-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-extrabold tracking-tight">
